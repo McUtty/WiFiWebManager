@@ -76,6 +76,8 @@ Nach dem Speichern von WLAN-Daten verbindet sich das Modul automatisch als Clien
 |------------|-------------------------------------------------------------|
 | `begin()`  | Startet das gesamte Modul, liest Einstellungen, startet Webserver  |
 | `loop()`   | Muss im Arduino-Loop laufen, verarbeitet Systemfunktionen   |
+| `reset()`   | Löscht alle Einstellungen und startet das Board neu   |
+
 
 **Alles Weitere steuerst du über das Webinterface.**  
 Wenn du Funktionen wie Werksreset, neue Seiten oder spezielle Einstellungen im Code triggern möchtest, kannst du die Klasse leicht erweitern.
@@ -84,18 +86,31 @@ Wenn du Funktionen wie Werksreset, neue Seiten oder spezielle Einstellungen im C
 
 ## Typische Erweiterung (Beispiel: Werksreset per Taster)
 
-Füge in der `WifiWebManager.h` (im `public:`-Block) folgendes hinzu:
+
+So kannst du im Sketch z.B. mit einem Hardware-Button einen Reset auslösen:
 
 ```cpp
-void clearAllConfig();
-```
+#define RESET_PIN  0  // z.B. GPIO0 (je nach Board anpassen)
 
-Dann kannst du im Sketch z.B. mit einem Hardware-Button einen Reset auslösen:
+#include "WifiWebManager.h"
 
-```cpp
-if (digitalRead(RESET_PIN) == LOW) {
-    wifiWebManager.clearAllConfig();
-    ESP.restart();
+WifiWebManager wifiWebManager;
+
+void setup() {
+    Serial.begin(115200);
+    pinMode(RESET_PIN, INPUT_PULLUP);
+    wifiWebManager.begin();
+}
+
+void loop() {
+    wifiWebManager.loop();
+
+    // Hardware-Reset: Taster gegen GND drücken
+    if (digitalRead(RESET_PIN) == LOW) {
+        Serial.println("Hardware-Reset ausgelöst!");
+        wifiWebManager.reset();
+        delay(1000);  // Entprellen & Reset nicht mehrfach auslösen
+    }
 }
 ```
 
