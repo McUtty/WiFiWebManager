@@ -11,6 +11,7 @@ public:
     WifiWebManager();
     void begin();
     void loop();
+    void reset();
 
 private:
     Preferences prefs;
