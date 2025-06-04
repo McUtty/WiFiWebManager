@@ -102,7 +102,7 @@ if (digitalRead(RESET_PIN) == LOW) {
 
 ## Alle enthaltenen Features im Überblick
 
-- **Automatische AP/STA-Umschaltung
+- Automatische AP/STA-Umschaltung
 - SSID-Auswahl
 - Hostname und statische IP
 - NTP-Zeitserver und Aktivierung
