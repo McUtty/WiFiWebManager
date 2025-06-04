@@ -1,0 +1,57 @@
+# ESP32 WifiWebManager
+
+Ein vielseitiges, modernes ESP32-Webkonfigurationsmodul mit WLAN-, Hostname-, IP- und NTP-Verwaltung, OTA-Update und Werksreset.  
+**Optimiert für die Integration in eigene Projekte – vollständig steuerbar per Webinterface.**
+
+---
+
+## Features
+
+- **WLAN-Konfiguration** mit automatischer Umschaltung zwischen Access-Point (AP) und Client (STA)
+- **SSID-Auswahl** (Dropdown im Webinterface)
+- **Hostname (Gerätename) einstellbar**
+- **Optionale statische IP-Konfiguration**
+- **Responsives, modernes Webinterface** – optimiert für Mobilgeräte und Desktop, zentriert & mit Menü
+- **Menüstruktur:** WLAN, NTP, Firmware-Update, Werksreset
+- **NTP (Zeitsynchronisierung)** bequem im Webinterface einstellbar
+- **OTA-Firmware-Update** direkt per Web (Dateiupload)
+- **Werksreset per Webinterface**
+- **Alle Statusmeldungen auf dem seriellen Monitor**
+- **Sehr einfach zu integrieren:** Nur `begin()` und `loop()` im Hauptprogramm nötig
+- **Erweiterbar für eigene Felder/Seiten**
+
+---
+
+## Getting Started
+
+### 1. **Bibliotheken installieren**
+
+- [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer)
+- [AsyncTCP](https://github.com/me-no-dev/AsyncTCP)
+- [ArduinoOTA](https://github.com/esp8266/Arduino/tree/master/libraries/ArduinoOTA) (bei ESP32-Boards meist enthalten)
+
+### 2. **Dateien einfügen**
+
+Lege diese Dateien in deinen Sketch-Ordner:
+
+- `WifiWebManager.h`
+- `WifiWebManager.cpp`
+- `main.ino` (siehe Beispiel)
+
+---
+
+### 3. **Hauptprogramm (`main.ino`)**
+
+```cpp
+#include "WifiWebManager.h"
+
+WifiWebManager wifiWebManager;
+
+void setup() {
+    Serial.begin(115200);
+    wifiWebManager.begin();  // Startet alles: WLAN, Webinterface, OTA etc.
+}
+
+void loop() {
+    wifiWebManager.loop();   // Muss regelmäßig im Hauptloop laufen
+}
