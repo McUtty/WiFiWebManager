@@ -55,38 +55,52 @@ void setup() {
 void loop() {
     wifiWebManager.loop();   // Muss regelmäßig im Hauptloop laufen
 }
+```
 
+# Webinterface
 
-Webinterface
+- **WLAN, Hostname, statische IP**: Alles bequem im Browser einstellen  
+- **NTP-Server und -Aktivierung** separat im Menüpunkt „NTP“ konfigurieren  
+- **Firmware-Update** direkt per Web-Upload (Menüpunkt „Firmware“)  
+- **Reset**: Setzt alle Einstellungen auf Werkseinstellungen zurück
 
-WLAN, Hostname, statische IP: Alles bequem im Browser einstellen
-NTP-Server und -Aktivierung separat im Menüpunkt „NTP“ konfigurieren
-Firmware-Update direkt per Web-Upload (Menüpunkt „Firmware“)
-Reset: Setzt alle Einstellungen auf Werkseinstellungen zurück
-Erster Start:
-ESP32 startet als Access-Point ESP32_SETUP (IP: 192.168.4.1).
+**Erster Start:**  
+ESP32 startet als Access-Point `ESP32_SETUP` (IP: `192.168.4.1`).  
 Nach dem Speichern von WLAN-Daten verbindet sich das Modul automatisch als Client.
 
-Methodenübersicht (WifiWebManager)
+---
 
-Methode	Beschreibung
-begin()	Startet das gesamte Modul, liest Einstellungen, startet Webserver
-loop()	Muss im Arduino-Loop laufen, verarbeitet Systemfunktionen
-Alles Weitere steuerst du über das Webinterface.
+## Methodenübersicht (`WifiWebManager`)
+
+| Methode    | Beschreibung                                                |
+|------------|-------------------------------------------------------------|
+| `begin()`  | Startet das gesamte Modul, liest Einstellungen, startet Webserver  |
+| `loop()`   | Muss im Arduino-Loop laufen, verarbeitet Systemfunktionen   |
+
+**Alles Weitere steuerst du über das Webinterface.**  
 Wenn du Funktionen wie Werksreset, neue Seiten oder spezielle Einstellungen im Code triggern möchtest, kannst du die Klasse leicht erweitern.
 
-Typische Erweiterung (Beispiel: Werksreset per Taster)
+---
 
-Füge in der WifiWebManager.h (im public:-Block)
+## Typische Erweiterung (Beispiel: Werksreset per Taster)
 
+Füge in der `WifiWebManager.h` (im `public:`-Block) folgendes hinzu:
+
+```cpp
 void clearAllConfig();
+```
+
 Dann kannst du im Sketch z.B. mit einem Hardware-Button einen Reset auslösen:
 
+```cpp
 if (digitalRead(RESET_PIN) == LOW) {
     wifiWebManager.clearAllConfig();
     ESP.restart();
 }
-Alle enthaltenen Features im Überblick
+```
+
+
+## Alle enthaltenen Features im Überblick
 
 Automatische AP/STA-Umschaltung
 SSID-Auswahl
@@ -98,7 +112,9 @@ Modernes, responsives Webdesign mit Menü
 Statusausgabe über Serial
 Preferences als Datenspeicher (für Erweiterungen vorbereitet)
 Einfache Integration in beliebige Projekte
-Lizenz
+
+
+# Lizenz
 
 MIT License
 
