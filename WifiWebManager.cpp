@@ -413,3 +413,8 @@ void WifiWebManager::setupWebServer() {
     server.begin();
     Serial.println("WebServer gestartet!");
 }
+
+void WifiWebManager::reset() {
+    clearAllConfig();  // löscht alles in Preferences
+    shouldReboot = true;
+}
