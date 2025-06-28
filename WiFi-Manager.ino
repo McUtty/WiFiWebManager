@@ -1,12 +1,12 @@
-#include "WifiWebManager.h"
+#include "WiFiWebManager.h"
 
-WifiWebManager wifiWebManager;
+WiFiWebManager wwm;
 
 void setup() {
     Serial.begin(115200);
-    wifiWebManager.begin();
+    wwm.begin();
 }
 
 void loop() {
-    wifiWebManager.loop();
+    wwm.loop();
 }
