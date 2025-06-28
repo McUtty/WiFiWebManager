@@ -45,15 +45,15 @@ Lege diese Dateien in deinen Sketch-Ordner:
 ```cpp
 #include "WiFiWebManager.h"
 
-WiFiWebManager WiFiWebManager;
+WiFiWebManager wwm;
 
 void setup() {
     Serial.begin(115200);
-    WiFiWebManager.begin();  // Startet alles: WLAN, Webinterface, OTA etc.
+    wwm.begin();  // Startet alles: WLAN, Webinterface, OTA etc.
 }
 
 void loop() {
-    WiFiWebManager.loop();   // Muss regelmäßig im Hauptloop laufen
+    wwm.loop();   // Muss regelmäßig im Hauptloop laufen
 }
 ```
 
@@ -94,21 +94,21 @@ So kannst du im Sketch z.B. mit einem Hardware-Button einen Reset auslösen:
 
 #include "WiFiWebManager.h"
 
-WiFiWebManager WiFiWebManager;
+WiFiWebManager wwm;
 
 void setup() {
     Serial.begin(115200);
     pinMode(RESET_PIN, INPUT_PULLUP);
-    WiFiWebManager.begin();
+    wwm.begin();
 }
 
 void loop() {
-    WiFiWebManager.loop();
+    wwm.loop();
 
     // Hardware-Reset: Taster gegen GND drücken
     if (digitalRead(RESET_PIN) == LOW) {
         Serial.println("Hardware-Reset ausgelöst!");
-        WiFiWebManager.reset();
+        wwm.reset();
         delay(1000);  // Entprellen & Reset nicht mehrfach auslösen
     }
 }
