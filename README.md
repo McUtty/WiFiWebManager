@@ -1,4 +1,4 @@
-# ESP32 WifiWebManager
+# ESP32 WiFiWebManager
 
 Ein vielseitiges, modernes ESP32-Webkonfigurationsmodul mit WLAN-, Hostname-, IP- und NTP-Verwaltung, OTA-Update und Werksreset.  
 **Optimiert für die Integration in eigene Projekte – vollständig steuerbar per Webinterface.**
@@ -34,8 +34,8 @@ Ein vielseitiges, modernes ESP32-Webkonfigurationsmodul mit WLAN-, Hostname-, IP
 
 Lege diese Dateien in deinen Sketch-Ordner:
 
-- `WifiWebManager.h`
-- `WifiWebManager.cpp`
+- `WiFiWebManager.h`
+- `WiFiWebManager.cpp`
 - `main.ino` (siehe Beispiel)
 
 ---
@@ -43,17 +43,17 @@ Lege diese Dateien in deinen Sketch-Ordner:
 ### 3. **Hauptprogramm (`main.ino`)**
 
 ```cpp
-#include "WifiWebManager.h"
+#include "WiFiWebManager.h"
 
-WifiWebManager wifiWebManager;
+WiFiWebManager WiFiWebManager;
 
 void setup() {
     Serial.begin(115200);
-    wifiWebManager.begin();  // Startet alles: WLAN, Webinterface, OTA etc.
+    WiFiWebManager.begin();  // Startet alles: WLAN, Webinterface, OTA etc.
 }
 
 void loop() {
-    wifiWebManager.loop();   // Muss regelmäßig im Hauptloop laufen
+    WiFiWebManager.loop();   // Muss regelmäßig im Hauptloop laufen
 }
 ```
 
@@ -70,7 +70,7 @@ Nach dem Speichern von WLAN-Daten verbindet sich das Modul automatisch als Clien
 
 ---
 
-## Methodenübersicht (`WifiWebManager`)
+## Methodenübersicht (`WiFiWebManager`)
 
 | Methode    | Beschreibung                                                |
 |------------|-------------------------------------------------------------|
@@ -92,23 +92,23 @@ So kannst du im Sketch z.B. mit einem Hardware-Button einen Reset auslösen:
 ```cpp
 #define RESET_PIN  0  // z.B. GPIO0 (je nach Board anpassen)
 
-#include "WifiWebManager.h"
+#include "WiFiWebManager.h"
 
-WifiWebManager wifiWebManager;
+WiFiWebManager WiFiWebManager;
 
 void setup() {
     Serial.begin(115200);
     pinMode(RESET_PIN, INPUT_PULLUP);
-    wifiWebManager.begin();
+    WiFiWebManager.begin();
 }
 
 void loop() {
-    wifiWebManager.loop();
+    WiFiWebManager.loop();
 
     // Hardware-Reset: Taster gegen GND drücken
     if (digitalRead(RESET_PIN) == LOW) {
         Serial.println("Hardware-Reset ausgelöst!");
-        wifiWebManager.reset();
+        WiFiWebManager.reset();
         delay(1000);  // Entprellen & Reset nicht mehrfach auslösen
     }
 }
