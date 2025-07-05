@@ -72,11 +72,24 @@ Nach dem Speichern von WLAN-Daten verbindet sich das Modul automatisch als Clien
 
 ## Methodenübersicht (`WiFiWebManager`)
 
-| Methode    | Beschreibung                                                |
-|------------|-------------------------------------------------------------|
-| `begin()`  | Startet das gesamte Modul, liest Einstellungen, startet Webserver  |
-| `loop()`   | Muss im Arduino-Loop laufen, verarbeitet Systemfunktionen   |
-| `reset()`   | Löscht alle Einstellungen und startet das Board neu   |
+| Methode                                         | Rückgabetyp | Beschreibung                                                                        |
+| ----------------------------------------------- | ----------- | ----------------------------------------------------------------------------------- |
+| `begin()`                                       | `void`      | Initialisiert das Modul, lädt Einstellungen, startet WiFi, Webserver und OTA.       |
+| `loop()`                                        | `void`      | Muss im Hauptloop laufen, bearbeitet Hintergrundaufgaben (z.B. OTA).                |
+| `addPage(menutitel, pfad, get, post = nullptr)` | `void`      | Fügt einen Menüpunkt und eine GET/POST-Webseite hinzu.                              |
+| `removePage(pfad)`                              | `void`      | Entfernt eine eigene Seite/Menüpunkt (Standardseiten können nicht entfernt werden). |
+| `saveCustomData(key, wert)`                     | `void`      | Speichert beliebige Key/Value-Daten persistent im Flash.                            |
+| `loadCustomData(key, defaultValue = \"\")`      | `String`    | Lädt gespeicherte Key/Value-Daten, bei Fehlen wird der Defaultwert zurückgegeben.   |
+| `reset()`                                       | `void`      | Setzt alle Einstellungen auf Werkseinstellungen zurück und startet neu (AP-Modus).  |
+
+## Erläuterungen:
+
+- addPage():
+    - menutitel (String): Name im Menü
+    - pfad (String): URL, z.B. "/info"
+    - get (Handler): Lambda/Callback für GET
+    - post (optional Handler): Callback für POST (z.B. Formulare)
+- Standardseiten wie /, /wlan, /ntp, /update, /reset werden von der Library verwaltet und können nicht entfernt werden.
 
 
 **Alles Weitere steuerst du über das Webinterface.**  
