@@ -79,7 +79,7 @@ Nach dem Speichern von WLAN-Daten verbindet sich das Modul automatisch als Clien
 | `addPage(menutitel, pfad, get, post = nullptr)` | `void`      | Fügt einen Menüpunkt und eine GET/POST-Webseite hinzu.                              |
 | `removePage(pfad)`                              | `void`      | Entfernt eine eigene Seite/Menüpunkt (Standardseiten können nicht entfernt werden). |
 | `saveCustomData(key, wert)`                     | `void`      | Speichert beliebige Key/Value-Daten persistent im Flash.                            |
-| `loadCustomData(key, defaultValue = \"\")`      | `String`    | Lädt gespeicherte Key/Value-Daten, bei Fehlen wird der Defaultwert zurückgegeben.   |
+| `loadCustomData(key, defaultValue = "xx")`      | `String`    | Lädt gespeicherte Key/Value-Daten, bei Fehlen wird der Defaultwert zurückgegeben.   |
 | `reset()`                                       | `void`      | Setzt alle Einstellungen auf Werkseinstellungen zurück und startet neu (AP-Modus).  |
 
 ## Erläuterungen:
