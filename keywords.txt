@@ -1,0 +1,35 @@
+#######################################
+# Syntax Coloring Map For WiFiWebManager
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+WiFiWebManager	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin	KEYWORD2
+loop	KEYWORD2
+setDebugMode	KEYWORD2
+getDebugMode	KEYWORD2
+setDefaultHostname	KEYWORD2
+getHostname	KEYWORD2
+addPage	KEYWORD2
+removePage	KEYWORD2
+saveCustomData	KEYWORD2
+loadCustomData	KEYWORD2
+loadCustomDataInt	KEYWORD2
+loadCustomDataBool	KEYWORD2
+loadCustomDataFloat	KEYWORD2
+hasCustomData	KEYWORD2
+removeCustomData	KEYWORD2
+getCustomDataKeys	KEYWORD2
+reset	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
