@@ -220,3 +220,143 @@ Beiträge sind willkommen! Bitte lesen Sie [CONTRIBUTING.md](CONTRIBUTING.md) f�
 - **RAM**: ~50KB für Bibliothek + Webserver
 - **Flash**: ~200KB für Code + Web-Assets
 - **Arduino Core**: ESP32 v2.0.0 oder höher
+
+# WiFiWebManager Library - Funktionsreferenz
+
+## 📋 Grundlegende Methoden
+
+| Funktion | Beschreibung | Parameter | Rückgabe |
+|----------|--------------|-----------|----------|
+| `WiFiWebManager()` | Konstruktor - initialisiert Reset-Button (GPIO 0) | - | - |
+| `begin()` | Startet WiFiWebManager, verbindet WiFi oder startet AP | - | `void` |
+| `loop()` | Muss in main loop() aufgerufen werden | - | `void` |
+| `reset()` | Führt kompletten Werks-Reset durch | - | `void` |
+
+## 🌐 Netzwerk-Konfiguration
+
+| Funktion | Beschreibung | Parameter | Rückgabe |
+|----------|--------------|-----------|----------|
+| `setDefaultHostname(hostname)` | Setzt Standard-Hostname aus Code | `String hostname` | `void` |
+| `getHostname()` | Gibt aktuellen Hostname zurück | - | `String` |
+| `clearWiFiConfig()` | Löscht nur WiFi-Daten (SSID/Passwort) | - | `void` |
+| `clearAllConfig()` | Löscht alle Einstellungen (Werks-Reset) | - | `void` |
+
+## 📄 Custom Pages (Webseiten)
+
+| Funktion | Beschreibung | Parameter | Rückgabe |
+|----------|--------------|-----------|----------|
+| `addPage(title, path, getHandler)` | Fügt GET-only Seite hinzu | `String title, String path, ContentHandler getHandler` | `void` |
+| `addPage(title, path, getHandler, postHandler)` | Fügt Seite mit GET und POST hinzu | `String title, String path, ContentHandler getHandler, ContentHandler postHandler` | `void` |
+| `removePage(path)` | Entfernt Custom Page | `String path` | `void` |
+
+### ContentHandler Definition
+```cpp
+using ContentHandler = std::function<String(AsyncWebServerRequest*)>;
+```
+
+## 💾 Custom Data API
+
+### Speichern (Setter)
+
+| Funktion | Beschreibung | Parameter | Einschränkungen |
+|----------|--------------|-----------|-----------------|
+| `saveCustomData(key, value)` | Speichert String-Wert | `String key, String value` | **Key max. 14 Zeichen** |
+| `saveCustomData(key, value)` | Speichert Integer-Wert | `String key, int value` | **Key max. 14 Zeichen** |
+| `saveCustomData(key, value)` | Speichert Boolean-Wert | `String key, bool value` | **Key max. 14 Zeichen** |
+| `saveCustomData(key, value)` | Speichert Float-Wert | `String key, float value` | **Key max. 14 Zeichen** |
+
+### Laden (Getter)
+
+| Funktion | Beschreibung | Parameter | Rückgabe |
+|----------|--------------|-----------|----------|
+| `loadCustomData(key, defaultValue)` | Lädt String-Wert | `String key, String defaultValue = ""` | `String` |
+| `loadCustomDataInt(key, defaultValue)` | Lädt Integer-Wert | `String key, int defaultValue = 0` | `int` |
+| `loadCustomDataBool(key, defaultValue)` | Lädt Boolean-Wert | `String key, bool defaultValue = false` | `bool` |
+| `loadCustomDataFloat(key, defaultValue)` | Lädt Float-Wert | `String key, float defaultValue = 0.0` | `float` |
+
+### Verwaltung
+
+| Funktion | Beschreibung | Parameter | Rückgabe |
+|----------|--------------|-----------|----------|
+| `hasCustomData(key)` | Prüft ob Key existiert | `String key` | `bool` |
+| `removeCustomData(key)` | Löscht gespeicherten Wert | `String key` | `void` |
+| `getCustomDataKeys()` | Gibt alle Custom Keys zurück | - | `std::vector<String>` |
+
+## 🛠️ Debug & Utilities
+
+| Funktion | Beschreibung | Parameter | Rückgabe |
+|----------|--------------|-----------|----------|
+| `setDebugMode(enabled)` | Aktiviert/deaktiviert Debug-Ausgaben | `bool enabled` | `void` |
+| `getDebugMode()` | Gibt Debug-Status zurück | - | `bool` |
+
+## ⚠️ Wichtige Einschränkungen
+
+### 🔑 Key-Einschränkungen
+- **Maximale Länge: 14 Zeichen**
+- **Reservierte Keys** (können nicht verwendet werden):
+  - `ssid`, `pwd`, `hostname`
+  - `useStaticIP`, `ip`, `gateway`, `subnet`, `dns`
+  - `ntpEnable`, `ntpServer`, `bootAttempts`
+
+### 🔄 Boot-Attempt System
+- **Max. 3 Verbindungsversuche** bei WiFi-Fehlern
+- Nach 3 fehlgeschlagenen Versuchen → automatischer AP-Modus
+- Erfolgreiche Verbindung setzt Counter zurück
+
+### 🔧 Hardware Reset-Button (GPIO 0)
+| Druckdauer | Aktion |
+|------------|--------|
+| **3-10 Sekunden** | Nur WiFi-Daten löschen |
+| **>10 Sekunden** | Kompletter Werks-Reset |
+
+## 📝 Beispiel-Code
+
+```cpp
+#include "WiFiWebManager.h"
+
+WiFiWebManager wwm;
+
+// Custom Page Handler
+String handleMyPage(AsyncWebServerRequest *request) {
+    return "<h1>Meine Seite</h1><p>Status: " + 
+           wwm.loadCustomData("status", "OK") + "</p>";
+}
+
+void setup() {
+    Serial.begin(115200);
+    
+    // Hostname setzen
+    wwm.setDefaultHostname("MeinESP32");
+    
+    // Debug aktivieren
+    wwm.setDebugMode(true);
+    
+    // Custom Page hinzufügen
+    wwm.addPage("Status", "/status", handleMyPage);
+    
+    // Custom Data speichern (Key max. 14 Zeichen!)
+    wwm.saveCustomData("temp_max", 25.5f);
+    wwm.saveCustomData("alerts", true);
+    wwm.saveCustomData("count", 42);
+    
+    wwm.begin();
+}
+
+void loop() {
+    wwm.loop();
+    
+    // Custom Data laden
+    float maxTemp = wwm.loadCustomDataFloat("temp_max", 20.0f);
+    bool alertsOn = wwm.loadCustomDataBool("alerts", false);
+}
+```
+
+## 🌍 Standard-Webseiten
+
+Das System stellt automatisch folgende Seiten bereit:
+
+- **/** - Home/Status-Übersicht
+- **/wlan** - WiFi-Konfiguration
+- **/ntp** - NTP-Zeitserver Einstellungen
+- **/update** - OTA Firmware-Update
+- **/reset** - Reset-Optionen
