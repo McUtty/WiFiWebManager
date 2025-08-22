@@ -365,79 +365,79 @@ void WiFiWebManager::saveCustomData(const String& key, const String& value) {
         return;
     }
     
-    prefs.begin("customdata", false);
-    prefs.putString(("custom_" + key).c_str(), value);
+    prefs.begin("cdata", false);
+    prefs.putString(("c_" + key).c_str(), value);
     prefs.end();
 }
 
 void WiFiWebManager::saveCustomData(const String& key, int value) {
     if (isReservedKey(key)) return;
     
-    prefs.begin("customdata", false);
-    prefs.putInt(("custom_" + key).c_str(), value);
+    prefs.begin("cdata", false);
+    prefs.putInt(("c_" + key).c_str(), value);
     prefs.end();
 }
 
 void WiFiWebManager::saveCustomData(const String& key, bool value) {
     if (isReservedKey(key)) return;
     
-    prefs.begin("customdata", false);
-    prefs.putBool(("custom_" + key).c_str(), value);
+    prefs.begin("cdata", false);
+    prefs.putBool(("c_" + key).c_str(), value);
     prefs.end();
 }
 
 void WiFiWebManager::saveCustomData(const String& key, float value) {
     if (isReservedKey(key)) return;
     
-    prefs.begin("customdata", false);
-    prefs.putFloat(("custom_" + key).c_str(), value);
+    prefs.begin("cdata", false);
+    prefs.putFloat(("c_" + key).c_str(), value);
     prefs.end();
 }
 
 String WiFiWebManager::loadCustomData(const String& key, const String& defaultValue) {
-    prefs.begin("customdata", true);
-    String v = prefs.getString(("custom_" + key).c_str(), defaultValue);
+    prefs.begin("cdata", true);
+    String v = prefs.getString(("c_" + key).c_str(), defaultValue);
     prefs.end();
     return v;
 }
 
 int WiFiWebManager::loadCustomDataInt(const String& key, int defaultValue) {
-    prefs.begin("customdata", true);
-    int v = prefs.getInt(("custom_" + key).c_str(), defaultValue);
+    prefs.begin("cdata", true);
+    int v = prefs.getInt(("c_" + key).c_str(), defaultValue);
     prefs.end();
     return v;
 }
 
 bool WiFiWebManager::loadCustomDataBool(const String& key, bool defaultValue) {
-    prefs.begin("customdata", true);
-    bool v = prefs.getBool(("custom_" + key).c_str(), defaultValue);
+    prefs.begin("cdata", true);
+    bool v = prefs.getBool(("c_" + key).c_str(), defaultValue);
     prefs.end();
     return v;
 }
 
 float WiFiWebManager::loadCustomDataFloat(const String& key, float defaultValue) {
-    prefs.begin("customdata", true);
-    float v = prefs.getFloat(("custom_" + key).c_str(), defaultValue);
+    prefs.begin("cdata", true);
+    float v = prefs.getFloat(("c_" + key).c_str(), defaultValue);
     prefs.end();
     return v;
 }
 
 bool WiFiWebManager::hasCustomData(const String& key) {
-    prefs.begin("customdata", true);
-    bool exists = prefs.isKey(("custom_" + key).c_str());
+    prefs.begin("cdata", true);
+    bool exists = prefs.isKey(("c_" + key).c_str());
     prefs.end();
     return exists;
 }
 
 void WiFiWebManager::removeCustomData(const String& key) {
-    prefs.begin("customdata", false);
-    prefs.remove(("custom_" + key).c_str());
+    prefs.begin("cdata", false);
+    prefs.remove(("c_" + key).c_str());
     prefs.end();
 }
 
 std::vector<String> WiFiWebManager::getCustomDataKeys() {
     std::vector<String> keys;
-    prefs.begin("customdata", true);
+    prefs.begin("cdata", true);
     
     // ESP32 Preferences bietet keine direkte Möglichkeit, alle Schlüssel aufzulisten
     // Diese Funktion ist eine Placeholder-Implementierung
