@@ -71,7 +71,7 @@ Nach dem Start ist das Web-Interface verfügbar unter:
 
 ## 🔧 Erweiterte Nutzung
 
-### Eigene Seiten hinzufügen
+### Eigene Seiten hinzufügen (Die Namen für die Standard-Seiten sind reserviert)
 
 ```cpp
 // Einfache GET-Seite
@@ -101,7 +101,7 @@ wifiManager.addPage("Einstellungen", "/settings",
 );
 ```
 
-### Custom Data verwenden
+### Custom Data verwenden (Key max 14 Zeichen)
 
 ```cpp
 // Verschiedene Datentypen speichern
