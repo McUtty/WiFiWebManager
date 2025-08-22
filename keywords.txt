@@ -1,0 +1,90 @@
+#######################################
+# WiFiWebManager Library Keywords
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+WiFiWebManager	KEYWORD1
+WakeupStats	KEYWORD1
+ContentHandler	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+# Core Methods
+begin	KEYWORD2
+loop	KEYWORD2
+reset	KEYWORD2
+
+# WiFi & Network
+setDefaultHostname	KEYWORD2
+getHostname	KEYWORD2
+
+# NTP Configuration (v2.1.1)
+setDefaultNTP	KEYWORD2
+
+# Light Sleep Mode (v2.1.1)
+setDefaultLightSleep	KEYWORD2
+setLightSleepTimer	KEYWORD2
+addWakeupGPIO	KEYWORD2
+removeWakeupGPIO	KEYWORD2
+clearAllWakeupGPIOs	KEYWORD2
+
+# Wake-up Analysis (v2.1.1)
+getLastWakeupCause	KEYWORD2
+getWakeupCauseString	KEYWORD2
+getWakeupGPIO	KEYWORD2
+wasWokenByTimer	KEYWORD2
+wasWokenByGPIO	KEYWORD2
+wasWokenByWiFi	KEYWORD2
+
+# Wake-up Statistics (v2.1.1)
+enableWakeupLogging	KEYWORD2
+clearWakeupStats	KEYWORD2
+getWakeupStats	KEYWORD2
+
+# Custom Data API
+saveCustomData	KEYWORD2
+loadCustomData	KEYWORD2
+loadCustomDataInt	KEYWORD2
+loadCustomDataBool	KEYWORD2
+loadCustomDataFloat	KEYWORD2
+hasCustomData	KEYWORD2
+removeCustomData	KEYWORD2
+getCustomDataKeys	KEYWORD2
+
+# Web Pages
+addPage	KEYWORD2
+removePage	KEYWORD2
+
+# Debug
+setDebugMode	KEYWORD2
+getDebugMode	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+ESP_SLEEP_WAKEUP_UNDEFINED	LITERAL1
+ESP_SLEEP_WAKEUP_ALL	LITERAL1
+ESP_SLEEP_WAKEUP_EXT0	LITERAL1
+ESP_SLEEP_WAKEUP_EXT1	LITERAL1
+ESP_SLEEP_WAKEUP_TIMER	LITERAL1
+ESP_SLEEP_WAKEUP_TOUCHPAD	LITERAL1
+ESP_SLEEP_WAKEUP_ULP	LITERAL1
+ESP_SLEEP_WAKEUP_GPIO	LITERAL1
+ESP_SLEEP_WAKEUP_UART	LITERAL1
+ESP_SLEEP_WAKEUP_WIFI	LITERAL1
+ESP_SLEEP_WAKEUP_COCPU	LITERAL1
+ESP_SLEEP_WAKEUP_COCPU_TRAP_TRIG	LITERAL1
+ESP_SLEEP_WAKEUP_BT	LITERAL1
+
+GPIO_INTR_DISABLE	LITERAL1
+GPIO_INTR_POSEDGE	LITERAL1
+GPIO_INTR_NEGEDGE	LITERAL1
+GPIO_INTR_ANYEDGE	LITERAL1
+GPIO_INTR_LOW_LEVEL	LITERAL1
+GPIO_INTR_HIGH_LEVEL	LITERAL1

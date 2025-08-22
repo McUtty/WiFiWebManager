@@ -1,0 +1,44 @@
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Icon
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+
+# Arduino/ESP32 Build Files
+*.bin
+*.elf
+*.map
+build/
+.pio/
+.vscode/settings.json
+
+# Temporary Files
+*.tmp
+*.bak
+*.swp
+*~
+.cache/
+
+# IDE Files (falls du andere IDEs verwendest)
+.vscode/
+*.code-workspace
+
+# Compiler/Build Outputs
+*.o
+*.obj
+*.exe
+
+# Logs
+*.log
+
+# Compressed Files
+*.zip
+*.tar.gz
+*.rar
