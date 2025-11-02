@@ -155,6 +155,8 @@ private:
         String path;
         ContentHandler getHandler;
         ContentHandler postHandler;
+        AsyncCallbackWebHandler *getWebHandler = nullptr;
+        AsyncCallbackWebHandler *postWebHandler = nullptr;
     };
     std::vector<CustomPage> customPages;
 
