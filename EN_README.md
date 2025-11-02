@@ -290,3 +290,170 @@ Please read `CONTRIBUTING.md` for details.
 | **RAM**          | ~50 KB for framework + webserver |
 | **Flash**        | ~200 KB for code + web assets    |
 | **Arduino Core** | ESP32 v2.0.0 or higher           |
+
+
+
+Alles klar — ich füge den fehlenden Abschnitt jetzt in **korrekter englischer Form** und als **Framework**-Terminologie hinzu.
+
+---
+
+````markdown
+## 📚 WiFiWebManager Framework – Function Reference
+
+### 📋 Basic Methods
+
+| Function           | Description                                              | Parameters | Return |
+|--------------------|----------------------------------------------------------|------------|--------|
+| `WiFiWebManager()` | Constructor – initializes reset button (GPIO 0)          | –          | –      |
+| `begin()`          | Starts WiFiWebManager; connects to Wi-Fi or starts AP    | –          | `void` |
+| `loop()`           | Must be called inside the main `loop()`                  | –          | `void` |
+| `reset()`          | Performs a full factory reset                            | –          | `void` |
+
+---
+
+### 🌐 Network Configuration
+
+| Function                        | Description                               | Parameters             | Return   |
+|---------------------------------|-------------------------------------------|------------------------|----------|
+| `setDefaultHostname(hostname)`  | Sets default hostname from code           | `String hostname`      | `void`   |
+| `getHostname()`                 | Returns current hostname                  | –                      | `String` |
+| `clearWiFiConfig()`             | Erases only Wi-Fi credentials (SSID/PWD)  | –                      | `void`   |
+| `clearAllConfig()`              | Erases all settings (factory reset)       | –                      | `void`   |
+
+---
+
+### 📄 Custom Pages (Web)
+
+| Function                                              | Description                           | Parameters                                                                 | Return |
+|-------------------------------------------------------|---------------------------------------|----------------------------------------------------------------------------|--------|
+| `addPage(title, path, getHandler)`                    | Adds a GET-only page                  | `String title, String path, ContentHandler getHandler`                     | `void` |
+| `addPage(title, path, getHandler, postHandler)`       | Adds a page with GET and POST         | `String title, String path, ContentHandler getHandler, ContentHandler postHandler` | `void` |
+| `removePage(path)`                                    | Removes a custom page                 | `String path`                                                              | `void` |
+
+**ContentHandler definition**
+```cpp
+using ContentHandler = std::function<String(AsyncWebServerRequest*)>;
+````
+
+---
+
+### 💾 Custom Data API
+
+#### Saving (Setters)
+
+| Function                     | Description       | Parameters                 | Constraints           |
+| ---------------------------- | ----------------- | -------------------------- | --------------------- |
+| `saveCustomData(key, value)` | Stores a `String` | `String key, String value` | Key max 14 characters |
+| `saveCustomData(key, value)` | Stores an `int`   | `String key, int value`    | Key max 14 characters |
+| `saveCustomData(key, value)` | Stores a `bool`   | `String key, bool value`   | Key max 14 characters |
+| `saveCustomData(key, value)` | Stores a `float`  | `String key, float value`  | Key max 14 characters |
+
+#### Loading (Getters)
+
+| Function                                 | Description    | Parameters                              | Return   |
+| ---------------------------------------- | -------------- | --------------------------------------- | -------- |
+| `loadCustomData(key, defaultValue)`      | Loads `String` | `String key, String defaultValue = ""`  | `String` |
+| `loadCustomDataInt(key, defaultValue)`   | Loads `int`    | `String key, int defaultValue = 0`      | `int`    |
+| `loadCustomDataBool(key, defaultValue)`  | Loads `bool`   | `String key, bool defaultValue = false` | `bool`   |
+| `loadCustomDataFloat(key, defaultValue)` | Loads `float`  | `String key, float defaultValue = 0.0`  | `float`  |
+
+#### Management
+
+| Function                | Description             | Parameters   | Return                |
+| ----------------------- | ----------------------- | ------------ | --------------------- |
+| `hasCustomData(key)`    | Checks if key exists    | `String key` | `bool`                |
+| `removeCustomData(key)` | Deletes stored value    | `String key` | `void`                |
+| `getCustomDataKeys()`   | Returns all custom keys | –            | `std::vector<String>` |
+
+---
+
+### 🛠️ Debug & Utilities
+
+| Function                | Description                   | Parameters     | Return |
+| ----------------------- | ----------------------------- | -------------- | ------ |
+| `setDebugMode(enabled)` | Enables/disables debug output | `bool enabled` | `void` |
+| `getDebugMode()`        | Returns debug mode state      | –              | `bool` |
+
+---
+
+### ⚠️ Important Constraints
+
+#### 🔑 Key Constraints
+
+* **Max length:** 14 characters
+* **Reserved keys (do not use):**
+  `ssid`, `pwd`, `hostname`,
+  `useStaticIP`, `ip`, `gateway`, `subnet`, `dns`,
+  `ntpEnable`, `ntpServer`, `bootAttempts`
+
+#### 🔄 Boot-Attempt System
+
+* Up to **3** connection attempts on Wi-Fi errors
+* After 3 failures → automatic **AP mode**
+* Successful connection resets the counter
+
+#### 🔧 Hardware Reset Button (GPIO 0)
+
+| Press Duration | Action                       |
+| -------------- | ---------------------------- |
+| 3–10 seconds   | Erase Wi-Fi credentials only |
+| >10 seconds    | Full factory reset           |
+
+---
+
+### 📝 Example Code
+
+```cpp
+#include "WiFiWebManager.h"
+
+WiFiWebManager wwm;
+
+// Custom Page Handler
+String handleMyPage(AsyncWebServerRequest *request) {
+    return String("<h1>My Page</h1><p>Status: ") +
+           wwm.loadCustomData("status", "OK") + "</p>";
+}
+
+void setup() {
+    Serial.begin(115200);
+
+    // Set hostname
+    wwm.setDefaultHostname("MyESP32");
+
+    // Enable debug mode
+    wwm.setDebugMode(true);
+
+    // Add custom page
+    wwm.addPage("Status", "/status", handleMyPage);
+
+    // Save custom data (key max 14 chars!)
+    wwm.saveCustomData("temp_max", 25.5f);
+    wwm.saveCustomData("alerts", true);
+    wwm.saveCustomData("count", 42);
+
+    wwm.begin();
+}
+
+void loop() {
+    wwm.loop();
+
+    // Load custom data
+    float maxTemp = wwm.loadCustomDataFloat("temp_max", 20.0f);
+    bool alertsOn = wwm.loadCustomDataBool("alerts", false);
+}
+```
+
+---
+
+### 🌍 Default Web Pages
+
+The framework automatically provides:
+
+* `/` – Home / Status overview
+* `/wlan` – Wi-Fi configuration
+* `/ntp` – NTP time server settings
+* `/update` – OTA firmware update
+* `/reset` – Reset options
+
+```
+
