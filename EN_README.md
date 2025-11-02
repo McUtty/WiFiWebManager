@@ -1,51 +1,45 @@
-Excellent. Here’s the **professionally formatted English `README.md` version** of your *WiFiWebManager* project — clean, consistent, and fully ready for GitHub publication:
+# WiFiWebManager
 
----
-
-````markdown
-# 🧭 WiFiWebManager
-
-**WiFiWebManager** is a comprehensive ESP32 framework for Wi-Fi management with an intuitive web interface.  
-It provides robust connection handling, extensible web UI, persistent data storage, and OTA update capabilities.
+A comprehensive ESP32 framework for Wi-Fi management with a web interface, offering robust connection handling, extensible web UI, and persistent data storage.
 
 ---
 
 ## 🚀 Features
 
-- **Smart Wi-Fi Connection** — 3-attempt system with automatic fallback to AP mode  
-- **Reset Button Support** — Hardware reset via GPIO 0 (3s = Wi-Fi reset, 10s = full factory reset)  
-- **Automatic Reconnect** — Monitors and restores lost connections  
-- **Extensible Web Interface** — Easily add your own configuration pages  
-- **Custom Data API** — Persistent storage for multiple data types  
-- **Debug Mode** — Enable or disable debug output during development  
-- **OTA Updates** — Firmware updates through the web interface  
-- **Responsive Design** — Modern UI for desktop and mobile devices  
+* **Smart Wi-Fi Connection:** 3-attempt system with automatic fallback to AP mode
+* **Reset Button Support:** Hardware reset via GPIO 0 (3s = Wi-Fi reset, 10s = full factory reset)
+* **Auto Reconnect:** Monitors and restores lost connections
+* **Extensible Web Interface:** Easily add your own configuration pages
+* **Custom Data API:** Persistent storage for multiple data types
+* **Debug Mode:** Enable or disable debug output during development
+* **OTA Updates:** Firmware updates via web interface
+* **Responsive Design:** Modern web UI for both desktop and mobile
 
 ---
 
 ## 📦 Installation
 
-### Using Arduino IDE Library Manager
+### Arduino IDE Library Manager
 
-1. Open **Arduino IDE**
-2. Navigate to: `Sketch > Include Library > Manage Libraries`
-3. Search for **WiFiWebManager**
+1. Open Arduino IDE
+2. Go to **Sketch > Include Library > Manage Libraries**
+3. Search for **“WiFiWebManager”**
 4. Click **Install**
 
 ### Manual Installation
 
-1. Download the latest release from **Releases**
-2. Extract the ZIP file into your `Arduino/libraries` directory
-3. Restart the Arduino IDE
+1. Download the latest release
+2. Extract the ZIP file into your `Arduino/libraries` folder
+3. Restart Arduino IDE
 
 ---
 
 ## 🛠️ Dependencies
 
-This framework requires the following libraries:
+This framework requires:
 
-- [`ESPAsyncWebServer`](https://github.com/me-no-dev/ESPAsyncWebServer) *(installed automatically)*  
-- [`AsyncTCP`](https://github.com/me-no-dev/AsyncTCP)
+* **ESPAsyncWebServer** (installed automatically)
+* **AsyncTCP** (dependency of ESPAsyncWebServer)
 
 ---
 
@@ -62,16 +56,16 @@ void setup() {
     // Optional: Enable debug mode
     wifiManager.setDebugMode(true);
     
-    // Optional: Set a default hostname
+    // Optional: Set default hostname
     wifiManager.setDefaultHostname("MyESP32");
     
     wifiManager.begin();
 }
 
 void loop() {
-    wifiManager.loop(); // IMPORTANT: must be called in loop()
+    wifiManager.loop(); // IMPORTANT: must be called inside loop()
 }
-````
+```
 
 ---
 
@@ -79,17 +73,17 @@ void loop() {
 
 After startup, the web interface is available at:
 
-* **Wi-Fi Mode:** The IP address assigned to the ESP32
-* **Access Point Mode:** `http://192.168.4.1`
+* **Wi-Fi mode:** ESP32’s assigned IP address
+* **AP mode:** `http://192.168.4.1`
 
-### Default Pages
+### Default Pages:
 
 | Path      | Description                        |
 | --------- | ---------------------------------- |
 | `/`       | Status and overview (customizable) |
 | `/wlan`   | Wi-Fi configuration (fixed)        |
 | `/ntp`    | NTP time settings (fixed)          |
-| `/update` | OTA firmware update (fixed)        |
+| `/update` | Firmware update (fixed)            |
 | `/reset`  | Reset options (fixed)              |
 
 ---
@@ -98,9 +92,9 @@ After startup, the web interface is available at:
 
 ### Add Custom Pages
 
-**Note:** Default page names are reserved.
+(Names of default pages are reserved)
 
-#### Simple GET Page
+**Simple GET page:**
 
 ```cpp
 wifiManager.addPage("My Page", "/custom", 
@@ -110,7 +104,7 @@ wifiManager.addPage("My Page", "/custom",
 );
 ```
 
-#### GET and POST Page
+**Page with GET and POST support:**
 
 ```cpp
 wifiManager.addPage("Settings", "/settings", 
@@ -134,10 +128,10 @@ wifiManager.addPage("Settings", "/settings",
 
 ---
 
-### Using Custom Data (max key length: 14 characters)
+### Use Custom Data (key max 14 characters)
 
 ```cpp
-// Save different data types
+// Store different data types
 wifiManager.saveCustomData("deviceName", "Sensor1");    // String
 wifiManager.saveCustomData("interval", 5000);           // int
 wifiManager.saveCustomData("enabled", true);            // bool
@@ -149,7 +143,7 @@ int interval = wifiManager.loadCustomDataInt("interval", 1000);
 bool enabled = wifiManager.loadCustomDataBool("enabled", false);
 float calib = wifiManager.loadCustomDataFloat("calibration", 1.0);
 
-// Check and remove
+// Check existence and remove
 if (wifiManager.hasCustomData("oldValue")) {
     wifiManager.removeCustomData("oldValue");
 }
@@ -161,20 +155,18 @@ if (wifiManager.hasCustomData("oldValue")) {
 
 Connect a push button between **GPIO 0** and **GND**:
 
-| Duration     | Action                       |
-| ------------ | ---------------------------- |
-| 3–10 seconds | Erase Wi-Fi credentials only |
-| >10 seconds  | Full factory reset           |
+* Hold 3–10 seconds → erase only Wi-Fi data
+* Hold >10 seconds → full factory reset
 
 ---
 
 ## 🐛 Debug Mode
 
 ```cpp
-// Enable debug mode
+// Enable debug mode (only via code)
 wifiManager.setDebugMode(true);
 
-// Query status
+// Check status
 bool isDebugActive = wifiManager.getDebugMode();
 ```
 
@@ -184,25 +176,31 @@ bool isDebugActive = wifiManager.getDebugMode();
 
 ### Basic Functions
 
-| Function  | Description                         |
-| --------- | ----------------------------------- |
-| `begin()` | Initialize WiFiWebManager           |
-| `loop()`  | Must be called inside the main loop |
-| `reset()` | Perform full factory reset          |
+| Function  | Description                   |
+| --------- | ----------------------------- |
+| `begin()` | Initialize WiFiWebManager     |
+| `loop()`  | Must be called inside loop()  |
+| `reset()` | Performs a full factory reset |
+
+---
 
 ### Hostname Management
 
-| Function                                     | Description          |
-| -------------------------------------------- | -------------------- |
-| `setDefaultHostname(const String& hostname)` | Set default hostname |
-| `getHostname()`                              | Get current hostname |
+| Function                                     | Description               |
+| -------------------------------------------- | ------------------------- |
+| `setDefaultHostname(const String& hostname)` | Set default hostname      |
+| `getHostname()`                              | Retrieve current hostname |
+
+---
 
 ### Debug Functions
 
-| Function                     | Description               |
-| ---------------------------- | ------------------------- |
-| `setDebugMode(bool enabled)` | Enable/disable debug mode |
-| `getDebugMode()`             | Get debug mode state      |
+| Function                     | Description                 |
+| ---------------------------- | --------------------------- |
+| `setDebugMode(bool enabled)` | Enable/disable debug output |
+| `getDebugMode()`             | Get debug mode state        |
+
+---
 
 ### Page Management
 
@@ -213,9 +211,11 @@ void addPage(const String& title, const String& path,
 void removePage(const String& path);
 ```
 
+---
+
 ### Custom Data API
 
-**Saving Data**
+**Save:**
 
 ```cpp
 void saveCustomData(const String& key, const String& value);
@@ -224,7 +224,7 @@ void saveCustomData(const String& key, bool value);
 void saveCustomData(const String& key, float value);
 ```
 
-**Loading Data**
+**Load:**
 
 ```cpp
 String loadCustomData(const String& key, const String& defaultValue = "");
@@ -233,7 +233,7 @@ bool loadCustomDataBool(const String& key, bool defaultValue = false);
 float loadCustomDataFloat(const String& key, float defaultValue = 0.0);
 ```
 
-**Data Management**
+**Manage:**
 
 ```cpp
 bool hasCustomData(const String& key);
@@ -244,62 +244,49 @@ void removeCustomData(const String& key);
 
 ## ⚠️ Important Notes
 
-* `wifiManager.loop()` **must** be called inside your `loop()` function.
-* Avoid using reserved keys:
-  `ssid`, `pwd`, `hostname`, `useStaticIP`, `ip`, `gateway`, `subnet`, `dns`, `ntpEnable`, `ntpServer`, `bootAttempts`.
-* Enable debug mode **only** when needed.
-* GPIO 0 is typically the **boot button** on most ESP32 boards.
+* **wifiManager.loop()** must be called inside your `loop()` function
+* **Custom Data:** avoid reserved keys (`ssid`, `pwd`, `hostname`, etc.)
+* **Performance:** enable debug mode only when necessary
+* **Reset Button:** GPIO 0 is the default boot button on most ESP32 boards
 
 ---
 
-## 🔗 Example Projects
+## 🔗 Examples
 
-See `/examples` for complete sketches:
+See the `/examples` folder for complete demos:
 
-* **Basic** – minimal setup example
+* **Basic** – minimal setup
 * **CustomPages** – user-defined web pages
-* **SensorData** – IoT sensor with configuration interface
-* **SmartSwitch** – smart home device with Wi-Fi manager
+* **SensorData** – IoT sensor with configuration
+* **SmartSwitch** – smart home device
 
 ---
 
 ## 📄 License
 
-Licensed under the **MIT License**.
-See [`LICENSE`](LICENSE) for details.
+MIT License – see LICENSE for details
 
 ---
 
 ## 🤝 Contributing
 
 Contributions are welcome!
-Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) before submitting pull requests.
+Please read `CONTRIBUTING.md` for details.
 
 ---
 
 ## 📞 Support
 
-* **Issues:** via [GitHub Issues](https://github.com/your-repo/issues)
-* **Discussions:** via [GitHub Discussions](https://github.com/your-repo/discussions)
+* **Issues:** via GitHub Issues
+* **Discussions:** via GitHub Discussions
 
 ---
 
 ## 📊 System Requirements
 
-| Component        | Requirement                  |
-| ---------------- | ---------------------------- |
-| **Hardware**     | ESP32 (any variant)          |
-| **RAM**          | ~50 KB (library + webserver) |
-| **Flash**        | ~200 KB (code + web assets)  |
-| **Arduino Core** | ESP32 v2.0.0 or higher       |
-
----
-
-⭐ **WiFiWebManager** — simple, robust, and extensible Wi-Fi management for ESP32.
-
-```
-
----
-
-Would you like me to include a **short “About” and “Architecture” section** at the beginning (useful for a GitHub landing page and documentation clarity)? It would give your README a more professional and complete structure.
-```
+| Component        | Requirement                    |
+| ---------------- | ------------------------------ |
+| **Hardware**     | ESP32 (any variant)            |
+| **RAM**          | ~50 KB for library + webserver |
+| **Flash**        | ~200 KB for code + web assets  |
+| **Arduino Core** | ESP32 v2.0.0 or higher         |
