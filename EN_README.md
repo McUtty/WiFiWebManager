@@ -291,13 +291,8 @@ Please read `CONTRIBUTING.md` for details.
 | **Flash**        | ~200 KB for code + web assets    |
 | **Arduino Core** | ESP32 v2.0.0 or higher           |
 
-
-
-Alles klar — ich füge den fehlenden Abschnitt jetzt in **korrekter englischer Form** und als **Framework**-Terminologie hinzu.
-
 ---
 
-````markdown
 ## 📚 WiFiWebManager Framework – Function Reference
 
 ### 📋 Basic Methods
@@ -454,6 +449,4 @@ The framework automatically provides:
 * `/ntp` – NTP time server settings
 * `/update` – OTA firmware update
 * `/reset` – Reset options
-
-```
 
