@@ -249,10 +249,6 @@ Beiträge sind willkommen! Bitte lesen Sie [CONTRIBUTING.md](CONTRIBUTING.md) f�
 | `addPage(title, path, getHandler, postHandler)` | Fügt Seite mit GET und POST hinzu | `String title, String path, ContentHandler getHandler, ContentHandler postHandler` | `void` |
 | `removePage(path)` | Entfernt Custom Page | `String path` | `void` |
 
-### ContentHandler Definition
-```cpp
-using ContentHandler = std::function<String(AsyncWebServerRequest*)>;
-```
 
 ## 💾 Custom Data API
 
