@@ -221,7 +221,7 @@ Beiträge sind willkommen! Bitte lesen Sie [CONTRIBUTING.md](CONTRIBUTING.md) f�
 - **Flash**: ~200KB für Code + Web-Assets
 - **Arduino Core**: ESP32 v2.0.0 oder höher
 
-# WiFiWebManager Library - Funktionsreferenz
+# WiFiWebManager Library - Funktions Referenz
 
 ## 📋 Grundlegende Methoden
 
