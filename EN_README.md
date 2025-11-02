@@ -325,10 +325,6 @@ Please read `CONTRIBUTING.md` for details.
 | `addPage(title, path, getHandler, postHandler)`       | Adds a page with GET and POST         | `String title, String path, ContentHandler getHandler, ContentHandler postHandler` | `void` |
 | `removePage(path)`                                    | Removes a custom page                 | `String path`                                                              | `void` |
 
-**ContentHandler definition**
-```cpp
-using ContentHandler = std::function<String(AsyncWebServerRequest*)>;
-````
 
 ---
 
