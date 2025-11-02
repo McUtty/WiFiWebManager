@@ -217,7 +217,7 @@ Beiträge sind willkommen! Bitte lesen Sie [CONTRIBUTING.md](CONTRIBUTING.md) f�
 ## 📊 Systemanforderungen
 
 - **Hardware**: ESP32 (alle Varianten)
-- **RAM**: ~50KB für Bibliothek + Webserver
+- **RAM**: ~50KB für Framework + Webserver
 - **Flash**: ~200KB für Code + Web-Assets
 - **Arduino Core**: ESP32 v2.0.0 oder höher
 
