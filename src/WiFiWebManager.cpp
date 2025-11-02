@@ -459,7 +459,10 @@ void WiFiWebManager::resetBootAttempts()
 
 void WiFiWebManager::incrementBootAttempts()
 {
-    wifiBootAttempts++;
+    if (wifiBootAttempts < MAX_BOOT_ATTEMPTS)
+    {
+        wifiBootAttempts++;
+    }
     prefs.begin("netcfg", false);
     prefs.putInt("bootAttempts", wifiBootAttempts);
     prefs.end();
@@ -640,6 +643,7 @@ void WiFiWebManager::removeWakeupGPIO(int pin)
     {
         if (it->pin == pin)
         {
+            gpio_wakeup_disable((gpio_num_t)it->pin);
             wakeupGPIOs.erase(it);
             debugPrintf("GPIO %d Wake-up entfernt\n", pin);
             if (lightSleepEnabled)
@@ -651,6 +655,10 @@ void WiFiWebManager::removeWakeupGPIO(int pin)
 
 void WiFiWebManager::clearAllWakeupGPIOs()
 {
+    for (const auto &wgpio : wakeupGPIOs)
+    {
+        gpio_wakeup_disable((gpio_num_t)wgpio.pin);
+    }
     wakeupGPIOs.clear();
     debugPrintln("Alle GPIO Wake-ups entfernt");
     if (lightSleepEnabled)
@@ -667,6 +675,13 @@ void WiFiWebManager::configureLightSleep()
     // Timer Wake-up (immer aktiv für Library-Tasks)
     esp_sleep_enable_timer_wakeup(lightSleepTimer);
     debugPrintf("Timer Wake-up: %llu µs\n", lightSleepTimer);
+
+    // Vorhandene GPIO Wake-ups zurücksetzen, um verwaiste Quellen zu vermeiden
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_GPIO);
+    for (const auto &wgpio : wakeupGPIOs)
+    {
+        gpio_wakeup_disable((gpio_num_t)wgpio.pin);
+    }
 
     // Interne Wake-ups der Library aktivieren
     enableLibraryWakeups();
