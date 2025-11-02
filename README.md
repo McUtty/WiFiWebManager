@@ -63,11 +63,11 @@ Nach dem Start ist das Web-Interface verfügbar unter:
 - **AP-Modus**: http://192.168.4.1
 
 ### Standard-Seiten:
-- `/` - Status und Übersicht
-- `/wlan` - WLAN-Konfiguration
-- `/ntp` - NTP-Einstellungen  
-- `/update` - Firmware-Update
-- `/reset` - Reset-Optionen
+- `/` - Status und Übersicht (kann vom Inhalt angepasst werden)
+- `/wlan` - WLAN-Konfiguration (fix)
+- `/ntp` - NTP-Einstellungen (fix)
+- `/update` - Firmware-Update (fix)
+- `/reset` - Reset-Optionen (fix)
 
 ## 🔧 Erweiterte Nutzung
 
