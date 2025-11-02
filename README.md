@@ -1,6 +1,6 @@
 # WiFiWebManager
 
-Eine umfassende ESP32-Bibliothek für WLAN-Management mit Web-Interface, die robuste Verbindungsverwaltung, erweiterbares Web-UI und persistente Datenspeicherung bietet.
+Ein umfassende ESP32-Framework für WLAN-Management mit Web-Interface, die robuste Verbindungsverwaltung, erweiterbares Web-UI und persistente Datenspeicherung bietet.
 
 ## 🚀 Features
 
@@ -28,7 +28,7 @@ Eine umfassende ESP32-Bibliothek für WLAN-Management mit Web-Interface, die rob
 
 ## 🛠️ Abhängigkeiten
 
-Diese Bibliothek benötigt:
+Diese Framework benötigt:
 - **ESPAsyncWebServer** (wird automatisch installiert)
 - **AsyncTCP** (Abhängigkeit von ESPAsyncWebServer)
 
