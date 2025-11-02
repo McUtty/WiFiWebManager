@@ -284,9 +284,9 @@ Please read `CONTRIBUTING.md` for details.
 
 ## 📊 System Requirements
 
-| Component        | Requirement                    |
-| ---------------- | ------------------------------ |
-| **Hardware**     | ESP32 (any variant)            |
-| **RAM**          | ~50 KB for library + webserver |
-| **Flash**        | ~200 KB for code + web assets  |
-| **Arduino Core** | ESP32 v2.0.0 or higher         |
+| Component        | Requirement                      |
+| ---------------- | -------------------------------- |
+| **Hardware**     | ESP32 (any variant)              |
+| **RAM**          | ~50 KB for framework + webserver |
+| **Flash**        | ~200 KB for code + web assets    |
+| **Arduino Core** | ESP32 v2.0.0 or higher           |
