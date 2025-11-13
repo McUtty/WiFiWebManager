@@ -96,6 +96,19 @@ public:
 
     void reset();
 
+    // Erweiterte Wartungs- und Servicefunktionen
+    void clearWiFiConfig();
+    void clearAllConfig();
+    void resetBootAttempts();
+    void incrementBootAttempts();
+    bool connectToStoredWiFi();
+    void startAP();
+    String getAvailableSSIDs();
+    void handleNTP();
+    void configureLightSleep();
+    void analyzeWakeupCause();
+    void debugPrintWakeupCause();
+
 private:
     ContentHandler rootGetHandler = nullptr;
     ContentHandler rootPostHandler = nullptr;
@@ -108,6 +121,10 @@ private:
     String ip, gateway, subnet, dns;
     bool useStaticIP = false;
     bool shouldReboot = false;
+
+    std::vector<String> wifiScanCache;
+    unsigned long wifiScanLastUpdate = 0;
+    bool wifiScanInProgress = false;
 
     // NTP Konfiguration
     bool ntpEnable = false;
@@ -155,33 +172,25 @@ private:
         String path;
         ContentHandler getHandler;
         ContentHandler postHandler;
+        AsyncCallbackWebHandler *getWebHandler = nullptr;
+        AsyncCallbackWebHandler *postWebHandler = nullptr;
     };
     std::vector<CustomPage> customPages;
 
     void loadConfig();
     void saveConfig();
     void saveNtpConfig(bool ntpEnable, const String &ntpServer);
-    void clearAllConfig();
-    void clearWiFiConfig();
-
-    void startAP();
-    bool connectToStoredWiFi();
-    String getAvailableSSIDs();
     void setupWebServer();
     bool parseIPString(const String &str, IPAddress &out);
-    void handleNTP();
     void handleResetButton();
+    void beginWifiScan(bool force = false);
+    String getWifiScanStatusMessage();
 
-    void resetBootAttempts();
-    void incrementBootAttempts();
     bool isReservedKey(const String &key);
 
     // Light Sleep Management (v2.1.1)
-    void configureLightSleep();
     void enableLibraryWakeups();
-    void analyzeWakeupCause();
     void updateWakeupStats();
-    void debugPrintWakeupCause();
 
     // Debug-Hilfsfunktionen
     void debugPrint(const String &message);
@@ -191,4 +200,6 @@ private:
 
     String renderMenu(const String &currentPath);
     String htmlWrap(const String &menutitle, const String &currentPath, const String &content);
+    String buildDashboardContent(AsyncWebServerRequest *request, bool wifiOnly);
+    void processDashboardPost(AsyncWebServerRequest *request);
 };
