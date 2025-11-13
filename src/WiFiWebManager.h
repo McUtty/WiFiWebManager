@@ -194,4 +194,6 @@ private:
 
     String renderMenu(const String &currentPath);
     String htmlWrap(const String &menutitle, const String &currentPath, const String &content);
+    String buildDashboardContent(AsyncWebServerRequest *request, bool wifiOnly);
+    void processDashboardPost(AsyncWebServerRequest *request);
 };

@@ -1014,71 +1014,73 @@ void WiFiWebManager::removePage(const String &path)
     }
 }
 
-void WiFiWebManager::setupWebServer()
+
+String WiFiWebManager::buildDashboardContent(AsyncWebServerRequest *request, bool wifiOnly)
 {
-    server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        String content;
+    String content;
 
-        auto wifiModeToString = [](wifi_mode_t mode) {
-            switch (mode)
-            {
-            case WIFI_OFF:
-                return String("OFF");
-            case WIFI_STA:
-                return String("Station");
-            case WIFI_AP:
-                return String("Access Point");
-            case WIFI_AP_STA:
-                return String("AP + STA");
-            default:
-                return String("Unbekannt");
-            }
-        };
-
-        wifi_mode_t mode = WiFi.getMode();
-        wl_status_t status = WiFi.status();
-        String statusText = (status == WL_CONNECTED) ? String("Verbunden") : String("Getrennt");
-        String ipText = (status == WL_CONNECTED) ? WiFi.localIP().toString() : (useStaticIP ? ip : String("DHCP"));
-        String gwText = (status == WL_CONNECTED) ? WiFi.gatewayIP().toString() : (useStaticIP ? gateway : String("-"));
-        String subnetText = (status == WL_CONNECTED) ? WiFi.subnetMask().toString() : (useStaticIP ? subnet : String("-"));
-        String dnsText = (status == WL_CONNECTED) ? WiFi.dnsIP().toString() : (useStaticIP ? dns : String("-"));
-
-        content += F("<section class='card'><h2>WLAN-Status</h2>");
-        content += "<p><strong>Modus:</strong> " + htmlEscape(wifiModeToString(mode)) + "</p>";
-        content += "<p><strong>Status:</strong> " + htmlEscape(statusText) + "</p>";
-        if (status == WL_CONNECTED)
+    auto wifiModeToString = [](wifi_mode_t mode) {
+        switch (mode)
         {
-            content += "<p><strong>Verbunden mit:</strong> " + htmlEscape(WiFi.SSID()) + "</p>";
-            content += "<p><strong>Signal:</strong> " + String(WiFi.RSSI()) + " dBm</p>";
+        case WIFI_OFF:
+            return String("OFF");
+        case WIFI_STA:
+            return String("Station");
+        case WIFI_AP:
+            return String("Access Point");
+        case WIFI_AP_STA:
+            return String("AP + STA");
+        default:
+            return String("Unbekannt");
         }
-        else if (ssid.length() > 0)
-        {
-            content += "<p><strong>Gespeichertes WLAN:</strong> " + htmlEscape(ssid) + "</p>";
-        }
-        content += "<p><strong>Hostname:</strong> " + htmlEscape(getHostname()) + "</p>";
-        content += "<p><strong>IP:</strong> " + htmlEscape(ipText) + "</p>";
-        content += "<p><strong>Gateway:</strong> " + htmlEscape(gwText) + "</p>";
-        content += "<p><strong>Subnetz:</strong> " + htmlEscape(subnetText) + "</p>";
-        content += "<p><strong>DNS:</strong> " + htmlEscape(dnsText) + "</p>";
-        content += "</section>";
+    };
 
-        String wifiOptions = getAvailableSSIDs();
+    wifi_mode_t mode = WiFi.getMode();
+    wl_status_t status = WiFi.status();
+    String statusText = (status == WL_CONNECTED) ? String("Verbunden") : String("Getrennt");
+    String ipText = (status == WL_CONNECTED) ? WiFi.localIP().toString() : (useStaticIP ? ip : String("DHCP"));
+    String gwText = (status == WL_CONNECTED) ? WiFi.gatewayIP().toString() : (useStaticIP ? gateway : String("-"));
+    String subnetText = (status == WL_CONNECTED) ? WiFi.subnetMask().toString() : (useStaticIP ? subnet : String("-"));
+    String dnsText = (status == WL_CONNECTED) ? WiFi.dnsIP().toString() : (useStaticIP ? dns : String("-"));
 
-        content += F("<section class='card'><h2>WLAN konfigurieren</h2>");
-        content += F("<form method='POST' class='form-grid'>");
-        content += F("<input type='hidden' name='action' value='wifi'>");
-        content += "<label>SSID<input type='text' name='ssid' list='ssid-list' value='" + htmlEscape(ssid) + "'></label>";
-        content += "<datalist id='ssid-list'>" + wifiOptions + "</datalist>";
-        content += "<label>Passwort<input type='password' name='password' value='" + htmlEscape(password) + "' autocomplete='off'></label>";
-        content += "<label>Hostname<input type='text' name='hostname' value='" + htmlEscape(getHostname()) + "'></label>";
-        content += "<label class='checkbox'><input type='checkbox' name='useStaticIP' " + String(useStaticIP ? "checked" : "") + "> Statische IP verwenden</label>";
-        content += "<label>IP-Adresse<input type='text' name='ip' value='" + htmlEscape(ip) + "'></label>";
-        content += "<label>Gateway<input type='text' name='gateway' value='" + htmlEscape(gateway) + "'></label>";
-        content += "<label>Subnetz<input type='text' name='subnet' value='" + htmlEscape(subnet) + "'></label>";
-        content += "<label>DNS<input type='text' name='dns' value='" + htmlEscape(dns) + "'></label>";
-        content += F("<button type='submit'>Speichern &amp; Neustarten</button>");
-        content += F("</form></section>");
+    content += F("<section id='wifi-status' class='card'><h2>WLAN-Status</h2>");
+    content += "<p><strong>Modus:</strong> " + htmlEscape(wifiModeToString(mode)) + "</p>";
+    content += "<p><strong>Status:</strong> " + htmlEscape(statusText) + "</p>";
+    if (status == WL_CONNECTED)
+    {
+        content += "<p><strong>Verbunden mit:</strong> " + htmlEscape(WiFi.SSID()) + "</p>";
+        content += "<p><strong>Signal:</strong> " + String(WiFi.RSSI()) + " dBm</p>";
+    }
+    else if (ssid.length() > 0)
+    {
+        content += "<p><strong>Gespeichertes WLAN:</strong> " + htmlEscape(ssid) + "</p>";
+    }
+    content += "<p><strong>Hostname:</strong> " + htmlEscape(getHostname()) + "</p>";
+    content += "<p><strong>IP:</strong> " + htmlEscape(ipText) + "</p>";
+    content += "<p><strong>Gateway:</strong> " + htmlEscape(gwText) + "</p>";
+    content += "<p><strong>Subnetz:</strong> " + htmlEscape(subnetText) + "</p>";
+    content += "<p><strong>DNS:</strong> " + htmlEscape(dnsText) + "</p>";
+    content += "</section>";
 
+    String wifiOptions = getAvailableSSIDs();
+
+    content += F("<section id='wifi-config' class='card'><h2>WLAN konfigurieren</h2>");
+    content += F("<form method='POST' class='form-grid'>");
+    content += F("<input type='hidden' name='action' value='wifi'>");
+    content += "<label>SSID<input type='text' name='ssid' list='ssid-list' value='" + htmlEscape(ssid) + "'></label>";
+    content += "<datalist id='ssid-list'>" + wifiOptions + "</datalist>";
+    content += "<label>Passwort<input type='password' name='password' value='" + htmlEscape(password) + "' autocomplete='off'></label>";
+    content += "<label>Hostname<input type='text' name='hostname' value='" + htmlEscape(getHostname()) + "'></label>";
+    content += "<label class='checkbox'><input type='checkbox' name='useStaticIP' " + String(useStaticIP ? "checked" : "") + "> Statische IP verwenden</label>";
+    content += "<label>IP-Adresse<input type='text' name='ip' value='" + htmlEscape(ip) + "'></label>";
+    content += "<label>Gateway<input type='text' name='gateway' value='" + htmlEscape(gateway) + "'></label>";
+    content += "<label>Subnetz<input type='text' name='subnet' value='" + htmlEscape(subnet) + "'></label>";
+    content += "<label>DNS<input type='text' name='dns' value='" + htmlEscape(dns) + "'></label>";
+    content += F("<button type='submit'>Speichern &amp; Neustarten</button>");
+    content += F("</form></section>");
+
+    if (!wifiOnly)
+    {
         content += F("<section class='card'><h2>NTP Einstellungen</h2>");
         content += F("<form method='POST' class='form-grid'>");
         content += F("<input type='hidden' name='action' value='ntp'>");
@@ -1131,7 +1133,7 @@ void WiFiWebManager::setupWebServer()
             content += F("<table class='data-table'><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>");
             for (const auto &key : keys)
             {
-                content += "<tr><td>" + htmlEscape(key) + "</td><td>" + htmlEscape(loadCustomData(key, "")) + "</td></tr>";
+                content += "<tr><td>" + htmlEscape(key) + "</td><td>" + htmlEscape(loadCustomData(key)) + "</td></tr>";
             }
             content += F("</tbody></table>");
         }
@@ -1148,115 +1150,135 @@ void WiFiWebManager::setupWebServer()
         content += F("</form>");
         content += F("<form method='POST' class='inline-form'>");
         content += F("<input type='hidden' name='action' value='factoryReset'>");
-        content += F("<button type='submit' class='danger' onclick="return confirm('Alle Einstellungen wirklich löschen?');">Werksreset</button>");
+        content += F("<button type='submit' class='danger' onclick=\"return confirm('Alle Einstellungen wirklich löschen?');\">Werksreset</button>");
         content += F("</form></section>");
+    }
 
-        if (rootGetHandler)
+    if (!wifiOnly && rootGetHandler)
+    {
+        String extra = rootGetHandler(request);
+        if (extra.length() > 0)
         {
-            String extra = rootGetHandler(request);
-            if (extra.length() > 0)
+            content += extra;
+        }
+    }
+
+    return content;
+}
+
+void WiFiWebManager::processDashboardPost(AsyncWebServerRequest *request)
+{
+    String action;
+    if (request->hasParam("action", true))
+    {
+        action = request->getParam("action", true)->value();
+    }
+
+    bool persistConfig = false;
+
+    if (action == "wifi")
+    {
+        String newSsid = request->hasParam("ssid", true) ? request->getParam("ssid", true)->value() : ssid;
+        String newPassword = request->hasParam("password", true) ? request->getParam("password", true)->value() : password;
+        String newHostname = request->hasParam("hostname", true) ? request->getParam("hostname", true)->value() : hostname;
+        bool newStatic = request->hasParam("useStaticIP", true);
+        String newIp = request->hasParam("ip", true) ? request->getParam("ip", true)->value() : ip;
+        String newGateway = request->hasParam("gateway", true) ? request->getParam("gateway", true)->value() : gateway;
+        String newSubnet = request->hasParam("subnet", true) ? request->getParam("subnet", true)->value() : subnet;
+        String newDns = request->hasParam("dns", true) ? request->getParam("dns", true)->value() : dns;
+
+        ssid = newSsid;
+        password = newPassword;
+        hostname = newHostname;
+        useStaticIP = newStatic;
+        ip = newIp;
+        gateway = newGateway;
+        subnet = newSubnet;
+        dns = newDns;
+
+        persistConfig = true;
+        shouldReboot = true;
+        resetBootAttempts();
+    }
+    else if (action == "ntp")
+    {
+        ntpEnable = request->hasParam("ntpEnable", true);
+        ntpServer = request->hasParam("ntpServer", true) ? request->getParam("ntpServer", true)->value() : ntpServer;
+        handleNTP();
+        persistConfig = true;
+    }
+    else if (action == "sleep")
+    {
+        lightSleepEnabled = request->hasParam("lightSleep", true);
+        uint64_t timerMs = lightSleepTimer / 1000;
+        if (request->hasParam("sleepTimer", true))
+        {
+            timerMs = request->getParam("sleepTimer", true)->value().toInt();
+            if (timerMs < 10)
             {
-                content += extra;
+                timerMs = 10;
             }
         }
+        lightSleepTimer = timerMs * 1000ULL;
+        if (lightSleepEnabled)
+        {
+            configureLightSleep();
+        }
+        persistConfig = true;
+    }
+    else if (action == "logging")
+    {
+        wakeupLoggingEnabled = request->hasParam("wakeupLogging", true);
+        persistConfig = true;
+    }
+    else if (action == "clearStats")
+    {
+        clearWakeupStats();
+    }
+    else if (action == "clearWifi")
+    {
+        clearWiFiConfig();
+        shouldReboot = true;
+    }
+    else if (action == "factoryReset")
+    {
+        clearAllConfig();
+        shouldReboot = true;
+    }
+    else if (action == "reboot")
+    {
+        shouldReboot = true;
+    }
 
-        request->send(200, "text/html", htmlWrap("Übersicht", "/", content));
+    if (persistConfig)
+    {
+        saveConfig();
+    }
+
+    if (rootPostHandler)
+    {
+        rootPostHandler(request);
+    }
+}
+
+void WiFiWebManager::setupWebServer()
+{
+    server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        request->send(200, "text/html", htmlWrap("Übersicht", "/", buildDashboardContent(request, false)));
+    });
+
+    server.on("/wifi", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        request->send(200, "text/html", htmlWrap("WLAN", "/wifi", buildDashboardContent(request, true)));
     });
 
     server.on("/", HTTP_POST, [this](AsyncWebServerRequest *request) {
-        String action;
-        if (request->hasParam("action", true))
-        {
-            action = request->getParam("action", true)->value();
-        }
-
-        bool persistConfig = false;
-
-        if (action == "wifi")
-        {
-            String newSsid = request->hasParam("ssid", true) ? request->getParam("ssid", true)->value() : ssid;
-            String newPassword = request->hasParam("password", true) ? request->getParam("password", true)->value() : password;
-            String newHostname = request->hasParam("hostname", true) ? request->getParam("hostname", true)->value() : hostname;
-            bool newStatic = request->hasParam("useStaticIP", true);
-            String newIp = request->hasParam("ip", true) ? request->getParam("ip", true)->value() : ip;
-            String newGateway = request->hasParam("gateway", true) ? request->getParam("gateway", true)->value() : gateway;
-            String newSubnet = request->hasParam("subnet", true) ? request->getParam("subnet", true)->value() : subnet;
-            String newDns = request->hasParam("dns", true) ? request->getParam("dns", true)->value() : dns;
-
-            ssid = newSsid;
-            password = newPassword;
-            hostname = newHostname;
-            useStaticIP = newStatic;
-            ip = newIp;
-            gateway = newGateway;
-            subnet = newSubnet;
-            dns = newDns;
-
-            persistConfig = true;
-            shouldReboot = true;
-            resetBootAttempts();
-        }
-        else if (action == "ntp")
-        {
-            ntpEnable = request->hasParam("ntpEnable", true);
-            ntpServer = request->hasParam("ntpServer", true) ? request->getParam("ntpServer", true)->value() : ntpServer;
-            handleNTP();
-            persistConfig = true;
-        }
-        else if (action == "sleep")
-        {
-            lightSleepEnabled = request->hasParam("lightSleep", true);
-            uint64_t timerMs = lightSleepTimer / 1000;
-            if (request->hasParam("sleepTimer", true))
-            {
-                timerMs = request->getParam("sleepTimer", true)->value().toInt();
-                if (timerMs < 10)
-                {
-                    timerMs = 10;
-                }
-            }
-            lightSleepTimer = timerMs * 1000ULL;
-            if (lightSleepEnabled)
-            {
-                configureLightSleep();
-            }
-            persistConfig = true;
-        }
-        else if (action == "logging")
-        {
-            wakeupLoggingEnabled = request->hasParam("wakeupLogging", true);
-            persistConfig = true;
-        }
-        else if (action == "clearStats")
-        {
-            clearWakeupStats();
-        }
-        else if (action == "clearWifi")
-        {
-            clearWiFiConfig();
-            shouldReboot = true;
-        }
-        else if (action == "factoryReset")
-        {
-            clearAllConfig();
-            shouldReboot = true;
-        }
-        else if (action == "reboot")
-        {
-            shouldReboot = true;
-        }
-
-        if (persistConfig)
-        {
-            saveConfig();
-        }
-
-        if (rootPostHandler)
-        {
-            rootPostHandler(request);
-        }
-
+        processDashboardPost(request);
         request->redirect("/");
+    });
+
+    server.on("/wifi", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        processDashboardPost(request);
+        request->redirect("/wifi");
     });
 
     server.onNotFound([this](AsyncWebServerRequest *request) {
@@ -1359,6 +1381,13 @@ String WiFiWebManager::renderMenu(const String &currentPath)
         menu += F(" class='active'");
     }
     menu += F(">Übersicht</a>");
+
+    menu += "<a href='/wifi'";
+    if (currentPath == "/wifi")
+    {
+        menu += F(" class='active'");
+    }
+    menu += F(">WLAN</a>");
 
     for (const auto &page : customPages)
     {
