@@ -595,7 +595,35 @@ void WiFiWebManager::beginWifiScan(bool force)
     }
 
     wifi_mode_t currentMode = WiFi.getMode();
-    if (!(currentMode & WIFI_MODE_STA))
+    const bool hasSta = (currentMode & WIFI_MODE_STA) != 0;
+    const bool hasAp = (currentMode & WIFI_MODE_AP) != 0;
+    const bool apOnly = hasAp && !hasSta;
+
+    if (apOnly)
+    {
+        wifiScanInProgress = true;
+        int networks = WiFi.scanNetworks(false);
+        wifiScanInProgress = false;
+
+        if (networks >= 0)
+        {
+            wifiScanCache.clear();
+            wifiScanCache.reserve(networks);
+            for (int i = 0; i < networks; ++i)
+            {
+                wifiScanCache.push_back(WiFi.SSID(i));
+            }
+            WiFi.scanDelete();
+            wifiScanLastUpdate = millis();
+        }
+        else if (networks == WIFI_SCAN_FAILED_CODE)
+        {
+            WiFi.scanDelete();
+        }
+        return;
+    }
+
+    if (!hasSta)
     {
         if (currentMode == WIFI_MODE_AP)
         {
@@ -626,6 +654,7 @@ void WiFiWebManager::beginWifiScan(bool force)
     }
     else if (started == WIFI_SCAN_FAILED_CODE)
     {
+        WiFi.scanDelete();
         wifiScanInProgress = false;
     }
 }
