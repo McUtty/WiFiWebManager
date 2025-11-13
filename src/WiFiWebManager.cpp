@@ -1412,19 +1412,35 @@ void WiFiWebManager::setupWebServer()
         request->send(200, "text/html", htmlWrap("Übersicht", "/", buildDashboardContent(request, false)));
     });
 
-    server.on("/wifi", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        request->send(200, "text/html", htmlWrap("WLAN", "/wifi", buildDashboardContent(request, true)));
-    });
+    auto wifiGetHandler = [this](AsyncWebServerRequest *request) {
+        String path = request->url();
+        if (path != "/wlan" && path != "/wifi")
+        {
+            path = "/wlan";
+        }
+        request->send(200, "text/html", htmlWrap("WLAN", path, buildDashboardContent(request, true)));
+    };
+
+    server.on("/wifi", HTTP_GET, wifiGetHandler);
+    server.on("/wlan", HTTP_GET, wifiGetHandler);
 
     server.on("/", HTTP_POST, [this](AsyncWebServerRequest *request) {
         processDashboardPost(request);
         request->redirect("/");
     });
 
-    server.on("/wifi", HTTP_POST, [this](AsyncWebServerRequest *request) {
+    auto wifiPostHandler = [this](AsyncWebServerRequest *request) {
         processDashboardPost(request);
-        request->redirect("/wifi");
-    });
+        String path = request->url();
+        if (path != "/wlan" && path != "/wifi")
+        {
+            path = "/wlan";
+        }
+        request->redirect(path);
+    };
+
+    server.on("/wifi", HTTP_POST, wifiPostHandler);
+    server.on("/wlan", HTTP_POST, wifiPostHandler);
 
     server.onNotFound([this](AsyncWebServerRequest *request) {
         request->send(404, "text/html", htmlWrap("Nicht gefunden", request->url(), F("<p>Die angeforderte Seite wurde nicht gefunden.</p>")));
@@ -1527,8 +1543,8 @@ String WiFiWebManager::renderMenu(const String &currentPath)
     }
     menu += F(">Übersicht</a>");
 
-    menu += "<a href='/wifi'";
-    if (currentPath == "/wifi")
+    menu += "<a href='/wlan'";
+    if (currentPath == "/wlan" || currentPath == "/wifi")
     {
         menu += F(" class='active'");
     }
