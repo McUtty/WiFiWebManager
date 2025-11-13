@@ -215,7 +215,7 @@ void WiFiWebManager::begin()
     handleNTP();
     setupWebServer();
     ArduinoOTA.begin();
-    beginWifiScan(true);
+    scheduleWifiScan(true);
 
     // Light Sleep konfigurieren (v2.1.1)
     if (lightSleepEnabled)
@@ -227,6 +227,14 @@ void WiFiWebManager::begin()
 
 void WiFiWebManager::loop()
 {
+    if (wifiScanScheduled && !wifiScanInProgress)
+    {
+        bool force = wifiScanForceRequested;
+        wifiScanForceRequested = false;
+        wifiScanScheduled = false;
+        beginWifiScan(force);
+    }
+
     if (shouldReboot)
     {
         debugPrintln("Reboot...");
@@ -561,7 +569,7 @@ String WiFiWebManager::getAvailableSSIDs()
 
     if (!wifiScanInProgress && (wifiScanCache.empty() || (now - wifiScanLastUpdate) > 30000UL))
     {
-        beginWifiScan();
+        scheduleWifiScan();
     }
 
     String options;
@@ -659,11 +667,25 @@ void WiFiWebManager::beginWifiScan(bool force)
     }
 }
 
+void WiFiWebManager::scheduleWifiScan(bool force)
+{
+    if (force)
+    {
+        wifiScanForceRequested = true;
+    }
+    wifiScanScheduled = true;
+}
+
 String WiFiWebManager::getWifiScanStatusMessage()
 {
     if (wifiScanInProgress)
     {
         return F("Netzwerksuche läuft …");
+    }
+
+    if (wifiScanScheduled)
+    {
+        return F("Netzwerksuche wird gestartet …");
     }
 
     if (wifiScanCache.empty())
@@ -1407,7 +1429,7 @@ void WiFiWebManager::processDashboardPost(AsyncWebServerRequest *request)
     }
     else if (action == "scanNetworks")
     {
-        beginWifiScan(true);
+        scheduleWifiScan(true);
     }
     else if (action == "clearWifi")
     {

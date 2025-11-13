@@ -125,6 +125,8 @@ private:
     std::vector<String> wifiScanCache;
     unsigned long wifiScanLastUpdate = 0;
     bool wifiScanInProgress = false;
+    bool wifiScanScheduled = false;
+    bool wifiScanForceRequested = false;
 
     // NTP Konfiguration
     bool ntpEnable = false;
@@ -184,6 +186,7 @@ private:
     bool parseIPString(const String &str, IPAddress &out);
     void handleResetButton();
     void beginWifiScan(bool force = false);
+    void scheduleWifiScan(bool force = false);
     String getWifiScanStatusMessage();
 
     bool isReservedKey(const String &key);
