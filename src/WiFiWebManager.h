@@ -122,6 +122,10 @@ private:
     bool useStaticIP = false;
     bool shouldReboot = false;
 
+    std::vector<String> wifiScanCache;
+    unsigned long wifiScanLastUpdate = 0;
+    bool wifiScanInProgress = false;
+
     // NTP Konfiguration
     bool ntpEnable = false;
     String ntpServer = "pool.ntp.org";
@@ -179,6 +183,8 @@ private:
     void setupWebServer();
     bool parseIPString(const String &str, IPAddress &out);
     void handleResetButton();
+    void beginWifiScan(bool force = false);
+    String getWifiScanStatusMessage();
 
     bool isReservedKey(const String &key);
 

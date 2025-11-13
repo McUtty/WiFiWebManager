@@ -23,6 +23,8 @@ namespace
 {
     constexpr const char *CUSTOM_DATA_NAMESPACE = "customdata";
     constexpr const char *CUSTOM_DATA_KEYS_KEY = "__keys__";
+    constexpr int WIFI_SCAN_RUNNING_CODE = -1;
+    constexpr int WIFI_SCAN_FAILED_CODE = -2;
 
     std::vector<String> splitKeyList(const String &raw)
     {
@@ -213,6 +215,7 @@ void WiFiWebManager::begin()
     handleNTP();
     setupWebServer();
     ArduinoOTA.begin();
+    beginWifiScan(true);
 
     // Light Sleep konfigurieren (v2.1.1)
     if (lightSleepEnabled)
@@ -531,19 +534,145 @@ void WiFiWebManager::startAP()
 
 String WiFiWebManager::getAvailableSSIDs()
 {
-    int n = WiFi.scanNetworks();
-    String options = "";
-    for (int i = 0; i < n; ++i)
+    const unsigned long now = millis();
+    const int scanState = WiFi.scanComplete();
+
+    if (scanState == WIFI_SCAN_RUNNING_CODE)
     {
-        String ssidValue = htmlEscape(WiFi.SSID(i));
-        options += "<option value=\"" + ssidValue + "\"";
-        if (ssid == WiFi.SSID(i))
-        {
-            options += " label=\"" + ssidValue + " (gespeichert)\"";
-        }
-        options += "></option>";
+        wifiScanInProgress = true;
     }
+    else if (scanState >= 0)
+    {
+        wifiScanCache.clear();
+        wifiScanCache.reserve(scanState);
+        for (int i = 0; i < scanState; ++i)
+        {
+            wifiScanCache.push_back(WiFi.SSID(i));
+        }
+        WiFi.scanDelete();
+        wifiScanLastUpdate = now;
+        wifiScanInProgress = false;
+    }
+    else if (scanState == WIFI_SCAN_FAILED_CODE)
+    {
+        WiFi.scanDelete();
+        wifiScanInProgress = false;
+    }
+
+    if (!wifiScanInProgress && (wifiScanCache.empty() || (now - wifiScanLastUpdate) > 30000UL))
+    {
+        beginWifiScan();
+    }
+
+    String options;
+    for (const auto &candidate : wifiScanCache)
+    {
+        String escaped = htmlEscape(candidate);
+        options += "<option value=\"" + escaped + "\"";
+        if (candidate == ssid)
+        {
+            options += " label=\"" + escaped + F(" (gespeichert)\"");
+        }
+        options += F("></option>");
+    }
+
     return options;
+}
+
+void WiFiWebManager::beginWifiScan(bool force)
+{
+    if (wifiScanInProgress && !force)
+    {
+        return;
+    }
+
+    if (force)
+    {
+        WiFi.scanDelete();
+        wifiScanCache.clear();
+        wifiScanLastUpdate = 0;
+        wifiScanInProgress = false;
+    }
+
+    wifi_mode_t currentMode = WiFi.getMode();
+    if (!(currentMode & WIFI_MODE_STA))
+    {
+        if (currentMode == WIFI_MODE_AP)
+        {
+            WiFi.mode(WIFI_MODE_APSTA);
+        }
+        else if (currentMode == WIFI_MODE_NULL)
+        {
+            WiFi.mode(WIFI_MODE_STA);
+        }
+    }
+
+    int started = WiFi.scanNetworks(true);
+    if (started == WIFI_SCAN_RUNNING_CODE)
+    {
+        wifiScanInProgress = true;
+    }
+    else if (started >= 0)
+    {
+        wifiScanCache.clear();
+        wifiScanCache.reserve(started);
+        for (int i = 0; i < started; ++i)
+        {
+            wifiScanCache.push_back(WiFi.SSID(i));
+        }
+        WiFi.scanDelete();
+        wifiScanLastUpdate = millis();
+        wifiScanInProgress = false;
+    }
+    else if (started == WIFI_SCAN_FAILED_CODE)
+    {
+        wifiScanInProgress = false;
+    }
+}
+
+String WiFiWebManager::getWifiScanStatusMessage()
+{
+    if (wifiScanInProgress)
+    {
+        return F("Netzwerksuche läuft …");
+    }
+
+    if (wifiScanCache.empty())
+    {
+        return F("Noch keine Netzwerke gefunden. Bitte ggf. erneut scannen.");
+    }
+
+    if (wifiScanLastUpdate == 0)
+    {
+        return F("Scan wird vorbereitet …");
+    }
+
+    unsigned long ageMs = millis() - wifiScanLastUpdate;
+    if (ageMs < 1000UL)
+    {
+        return F("Scan gerade aktualisiert.");
+    }
+
+    unsigned long seconds = ageMs / 1000UL;
+    if (seconds < 60UL)
+    {
+        return String(F("Scan vor ")) + seconds + F("s aktualisiert.");
+    }
+
+    unsigned long minutes = seconds / 60UL;
+    if (minutes < 60UL)
+    {
+        return String(F("Scan vor ")) + minutes + F("m aktualisiert.");
+    }
+
+    unsigned long hours = minutes / 60UL;
+    if (hours < 24UL)
+    {
+        return String(F("Scan vor ")) + hours + F("h aktualisiert.");
+    }
+
+    unsigned long days = hours / 24UL;
+    return String(F("Scan vor ")) + days + F("d aktualisiert.");
 }
 
 bool WiFiWebManager::parseIPString(const String &str, IPAddress &out)
@@ -1063,6 +1192,8 @@ String WiFiWebManager::buildDashboardContent(AsyncWebServerRequest *request, boo
     content += "</section>";
 
     String wifiOptions = getAvailableSSIDs();
+    bool scanningNetworks = wifiScanInProgress;
+    String scanStatus = getWifiScanStatusMessage();
 
     content += F("<section id='wifi-config' class='card'><h2>WLAN konfigurieren</h2>");
     content += F("<form method='POST' class='form-grid'>");
@@ -1077,6 +1208,16 @@ String WiFiWebManager::buildDashboardContent(AsyncWebServerRequest *request, boo
     content += "<label>Subnetz<input type='text' name='subnet' value='" + htmlEscape(subnet) + "'></label>";
     content += "<label>DNS<input type='text' name='dns' value='" + htmlEscape(dns) + "'></label>";
     content += F("<button type='submit'>Speichern &amp; Neustarten</button>");
+    content += F("</form>");
+    content += "<p class='hint'>" + htmlEscape(scanStatus) + "</p>";
+    content += F("<form method='POST' class='inline-form'>");
+    content += F("<input type='hidden' name='action' value='scanNetworks'>");
+    content += "<button type='submit' class='secondary";
+    if (scanningNetworks)
+    {
+        content += F(" disabled");
+    }
+    content += F("'>Netzwerke aktualisieren</button>");
     content += F("</form></section>");
 
     if (!wifiOnly)
@@ -1234,6 +1375,10 @@ void WiFiWebManager::processDashboardPost(AsyncWebServerRequest *request)
     else if (action == "clearStats")
     {
         clearWakeupStats();
+    }
+    else if (action == "scanNetworks")
+    {
+        beginWifiScan(true);
     }
     else if (action == "clearWifi")
     {
@@ -1429,6 +1574,7 @@ String WiFiWebManager::htmlWrap(const String &menutitle, const String &currentPa
     html += F(".stats{display:flex;flex-wrap:wrap;gap:1rem;padding:0;margin:.5rem 0 1rem 0;list-style:none;}");
     html += F(".stats li{background:#eef2ff;padding:.5rem .8rem;border-radius:.4rem;}");
     html += F(".inline-form{display:inline-block;margin-right:.5rem;}");
+    html += F(".hint{display:block;margin-top:.6rem;color:#475569;font-size:.85rem;}");
     html += F(".data-table{width:100%;border-collapse:collapse;margin-top:.5rem;}");
     html += F(".data-table th,.data-table td{border:1px solid #d1d5db;padding:.5rem;text-align:left;}");
     html += F(".footer{text-align:center;padding:1rem;color:#64748b;font-size:.85rem;}");
