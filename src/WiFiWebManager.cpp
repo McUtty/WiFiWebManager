@@ -8,6 +8,8 @@ const char* WiFiWebManager::CUSTOM_INDEX = "__idx";
 WiFiWebManager::WiFiWebManager() {
     // Reset-Button Pin als Input mit Pull-up konfigurieren
     pinMode(RESET_PIN, INPUT_PULLUP);
+    // Mutex für den geteilten Scan-Options-Puffer
+    scanMutex = xSemaphoreCreateMutex();
 }
 
 void WiFiWebManager::begin() {
@@ -57,12 +59,20 @@ void WiFiWebManager::loop() {
     
     handleResetButton();
     ArduinoOTA.handle();
-    
+
+    // WLAN-Scan bei Bedarf (Web-Handler hat scanRequested gesetzt) oder im
+    // AP-Modus periodisch ausführen. Läuft bewusst im loop()-Task – der Scan
+    // darf hier kurz blockieren, aber NICHT in der AsyncTCP-Task des Servers.
+    bool apish = (WiFi.getMode() != WIFI_STA);
+    if (scanRequested || (apish && millis() - lastScanMs > 20000)) {
+        updateScanCache();
+    }
+
     // Überwachung der WLAN-Verbindung (alle 30 Sekunden)
     static unsigned long lastWiFiCheck = 0;
     if (millis() - lastWiFiCheck > 30000) {
         lastWiFiCheck = millis();
-        
+
         if (WiFi.getMode() == WIFI_STA && WiFi.status() != WL_CONNECTED) {
             debugPrintln("WLAN-Verbindung verloren, versuche Reconnect...");
             // Nur versuchen wenn WLAN-Daten vorhanden sind
@@ -71,36 +81,54 @@ void WiFiWebManager::loop() {
             } else {
                 debugPrintln("Reconnect fehlgeschlagen oder keine WLAN-Daten vorhanden");
             }
-        } else if (WiFi.getMode() == WIFI_AP && ssid.length() > 0) {
-            // Im AP-Modus: Prüfe ob gespeichertes WLAN in Reichweite ist.
-            // Scan im AP_STA-Modus, damit der laufende AP dabei NICHT abgeschaltet
-            // wird und Clients während der Einrichtung verbunden bleiben.
-            debugPrintln("AP-Modus: Suche nach gespeichertem WLAN...");
-            WiFi.mode(WIFI_AP_STA);
-            int n = WiFi.scanNetworks();
-            bool found = false;
-            for (int i = 0; i < n; i++) {
-                if (WiFi.SSID(i) == ssid) { found = true; break; }
-            }
-            WiFi.scanDelete();
-
-            if (found) {
-                debugPrintln("Gespeichertes WLAN gefunden - versuche Wechsel zu STA...");
+        } else if (WiFi.getMode() != WIFI_STA && ssid.length() > 0) {
+            // AP/AP_STA-Modus: Wenn der letzte (im loop-Task ausgeführte) Scan
+            // das gespeicherte Netz zeigt, Wechsel zu STA versuchen. Bei
+            // Fehlschlag wird der AP wiederhergestellt.
+            if (storedSsidInRange) {
+                debugPrintln("Gespeichertes WLAN in Reichweite - versuche Wechsel zu STA...");
                 if (connectToStoredWiFi()) {
                     debugPrintln("Wechsel zu STA-Modus erfolgreich!");
-                    resetBootAttempts(); // Erfolgreiche Verbindung nach AP-Modus
+                    resetBootAttempts();
                 } else {
-                    // Verbindung fehlgeschlagen: AP wiederherstellen, damit die
-                    // Konfigurationsseite weiter erreichbar bleibt.
                     debugPrintln("Verbindung fehlgeschlagen - AP wird wiederhergestellt.");
                     startAP();
                 }
-            } else {
-                // Netzwerk nicht in Reichweite: zurück in den reinen AP-Modus.
-                WiFi.mode(WIFI_AP);
             }
         }
     }
+}
+
+// Führt einen (synchronen) WLAN-Scan im loop()-Task aus und baut daraus die
+// <option>-Liste für die WLAN-Seite. Ergebnis wird gepuffert; der Web-Handler
+// liest nur diesen Puffer und blockiert dadurch nie.
+void WiFiWebManager::updateScanCache() {
+    scanRequested = false;
+    int n = WiFi.scanNetworks();  // synchron – blockiert nur loop(), nicht den Server
+    String opts = "";
+    bool inRange = false;
+    for (int i = 0; i < n; ++i) {
+        String s = WiFi.SSID(i);
+        if (s == ssid) inRange = true;
+        String sel = (ssid == s) ? " selected" : "";
+        String cls = (ssid == s) ? " class='stored-network'" : "";
+        opts += "<option value='" + s + "'" + sel + cls + ">" + s;
+        if (ssid == s) opts += " (gespeichert)";
+        opts += "</option>";
+    }
+    WiFi.scanDelete();
+
+    // Fallback: gespeichertes Netz immer wählbar halten, auch bei leerem Scan
+    if (opts.length() == 0 && ssid.length() > 0) {
+        opts = "<option value='" + ssid + "' selected class='stored-network'>" + ssid + " (gespeichert)</option>";
+    }
+
+    if (scanMutex) xSemaphoreTake(scanMutex, portMAX_DELAY);
+    cachedScanOptions = opts;
+    if (scanMutex) xSemaphoreGive(scanMutex);
+
+    storedSsidInRange = inRange;
+    lastScanMs = millis();
 }
 
 void WiFiWebManager::handleResetButton() {
@@ -301,20 +329,29 @@ void WiFiWebManager::startAP() {
     WiFi.softAP("ESP32_SETUP");
     debugPrintln("Access Point gestartet: ESP32_SETUP");
     debugPrintln("AP-IP: 192.168.4.1");
+    // Ersten Netzwerk-Scan anfordern, damit die WLAN-Seite schnell eine Liste hat
+    scanRequested = true;
 }
 
 String WiFiWebManager::getAvailableSSIDs() {
-    int n = WiFi.scanNetworks();
-    String options = "";
-    for (int i = 0; i < n; ++i) {
-        String selected = (ssid == WiFi.SSID(i)) ? "selected" : "";
-        String cssClass = (ssid == WiFi.SSID(i)) ? " class='stored-network'" : "";
-        
-        options += "<option value='" + WiFi.SSID(i) + "' " + selected + cssClass + ">" + WiFi.SSID(i);
-        if (ssid == WiFi.SSID(i)) options += " (gespeichert)";
-        options += "</option>";
+    // Läuft in der AsyncTCP-Task: NICHT scannen (das würde den Server blockieren),
+    // sondern nur den im loop()-Task gefüllten Puffer auslesen und einen frischen
+    // Scan anfordern.
+    scanRequested = true;
+
+    String opts;
+    if (scanMutex) xSemaphoreTake(scanMutex, portMAX_DELAY);
+    opts = cachedScanOptions;
+    if (scanMutex) xSemaphoreGive(scanMutex);
+
+    if (opts.length() == 0) {
+        // Noch kein Scan-Ergebnis vorhanden
+        if (ssid.length() > 0) {
+            opts = "<option value='" + ssid + "' selected class='stored-network'>" + ssid + " (gespeichert)</option>";
+        }
+        opts += "<option value=''>Suche läuft… Seite bitte neu laden</option>";
     }
-    return options;
+    return opts;
 }
 
 bool WiFiWebManager::parseIPString(const String& str, IPAddress& out) {

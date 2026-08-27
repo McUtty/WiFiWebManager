@@ -5,6 +5,8 @@
 #include <Preferences.h>
 #include <ArduinoOTA.h>
 #include <Update.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 #include <vector>
 #include <functional>
 
@@ -74,6 +76,17 @@ private:
     // Boot-Attempt Management
     int wifiBootAttempts = 0;
     static const int MAX_BOOT_ATTEMPTS = 3;
+
+    // Entkoppelte WLAN-Scan-Verwaltung: Der Scan läuft im loop()-Task, der
+    // Web-Handler liest nur den gepufferten Options-String. So blockiert
+    // /wlan die AsyncTCP-Task NICHT. scanMutex schützt cachedScanOptions
+    // gegen gleichzeitigen Zugriff aus loop()- und async_tcp-Task.
+    String cachedScanOptions;
+    volatile bool scanRequested = false;
+    bool storedSsidInRange = false;
+    unsigned long lastScanMs = 0;
+    SemaphoreHandle_t scanMutex = nullptr;
+    void updateScanCache();
 
     struct CustomPage {
         String title;
