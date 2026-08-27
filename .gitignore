@@ -1,3 +1,11 @@
 .DS_Store
 *.tmp
 Thumbs.db
+
+# Editor- / IDE- / Toolchain-Artefakte (maschinenspezifisch, nicht committen)
+.vscode/
+.clangd
+compile_commands.json
+build/
+.pio/
+.cache/

@@ -366,8 +366,10 @@ void WiFiWebManager::debugPrintf(const char* format, ...) {
     if (debugMode) {
         va_list args;
         va_start(args, format);
-        Serial.vprintf(format, args);
+        char buf[256];
+        vsnprintf(buf, sizeof(buf), format, args);
         va_end(args);
+        Serial.print(buf);
     }
 }
 
