@@ -1,6 +1,6 @@
 # WiFiWebManager
 
-Ein umfassende ESP32-Framework für WLAN-Management mit Web-Interface, die robuste Verbindungsverwaltung, erweiterbares Web-UI und persistente Datenspeicherung bietet.
+Ein umfassendes ESP32-Framework für WLAN-Management mit Web-Interface, das robuste Verbindungsverwaltung, erweiterbares Web-UI und persistente Datenspeicherung bietet.
 
 ## 🚀 Features
 
@@ -22,13 +22,13 @@ Ein umfassende ESP32-Framework für WLAN-Management mit Web-Interface, die robus
 4. Klicken Sie auf **Install**
 
 ### Manuelle Installation
-1. Laden Sie die neueste Version von [Releases](https://github.com/IhrUsername/WiFiWebManager/releases)
+1. Laden Sie die neueste Version von [Releases](https://github.com/McUtty/WiFiWebManager/releases)
 2. Entpacken Sie die ZIP-Datei in Ihren Arduino/libraries Ordner
 3. Starten Sie Arduino IDE neu
 
 ## 🛠️ Abhängigkeiten
 
-Diese Framework benötigt:
+Dieses Framework benötigt:
 - **ESPAsyncWebServer** (wird automatisch installiert)
 - **AsyncTCP** (Abhängigkeit von ESPAsyncWebServer)
 
@@ -101,7 +101,7 @@ wifiManager.addPage("Einstellungen", "/settings",
 );
 ```
 
-### Custom Data verwenden (Key max 14 Zeichen)
+### Custom Data verwenden (Key max. 13 Zeichen)
 
 ```cpp
 // Verschiedene Datentypen speichern
@@ -197,9 +197,7 @@ void removeCustomData(const String& key);
 
 Siehe `/examples` Ordner für vollständige Beispiele:
 - `Basic` - Grundlegende Nutzung
-- `CustomPages` - Eigene Web-Seiten
-- `SensorData` - IoT-Sensor mit Konfiguration
-- `SmartSwitch` - Smart Home Gerät
+- `Test` - Custom Pages, Custom Data und Debug-Ausgaben (Demo mit simulierten Werten)
 
 ## 📄 Lizenz
 
@@ -207,12 +205,12 @@ MIT License - siehe [LICENSE](LICENSE) für Details.
 
 ## 🤝 Beitragen
 
-Beiträge sind willkommen! Bitte lesen Sie [CONTRIBUTING.md](CONTRIBUTING.md) für Details.
+Beiträge sind willkommen! Bitte eröffnen Sie ein Issue oder einen Pull Request auf GitHub.
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/IhrUsername/WiFiWebManager/issues)
-- **Diskussionen**: [GitHub Discussions](https://github.com/IhrUsername/WiFiWebManager/discussions)
+- **Issues**: [GitHub Issues](https://github.com/McUtty/WiFiWebManager/issues)
+- **Diskussionen**: [GitHub Discussions](https://github.com/McUtty/WiFiWebManager/discussions)
 
 ## 📊 Systemanforderungen
 
@@ -256,10 +254,10 @@ Beiträge sind willkommen! Bitte lesen Sie [CONTRIBUTING.md](CONTRIBUTING.md) f�
 
 | Funktion | Beschreibung | Parameter | Einschränkungen |
 |----------|--------------|-----------|-----------------|
-| `saveCustomData(key, value)` | Speichert String-Wert | `String key, String value` | **Key max. 14 Zeichen** |
-| `saveCustomData(key, value)` | Speichert Integer-Wert | `String key, int value` | **Key max. 14 Zeichen** |
-| `saveCustomData(key, value)` | Speichert Boolean-Wert | `String key, bool value` | **Key max. 14 Zeichen** |
-| `saveCustomData(key, value)` | Speichert Float-Wert | `String key, float value` | **Key max. 14 Zeichen** |
+| `saveCustomData(key, value)` | Speichert String-Wert | `String key, String value` | **Key max. 13 Zeichen** |
+| `saveCustomData(key, value)` | Speichert Integer-Wert | `String key, int value` | **Key max. 13 Zeichen** |
+| `saveCustomData(key, value)` | Speichert Boolean-Wert | `String key, bool value` | **Key max. 13 Zeichen** |
+| `saveCustomData(key, value)` | Speichert Float-Wert | `String key, float value` | **Key max. 13 Zeichen** |
 
 ### Laden (Getter)
 
@@ -288,7 +286,7 @@ Beiträge sind willkommen! Bitte lesen Sie [CONTRIBUTING.md](CONTRIBUTING.md) f�
 ## ⚠️ Wichtige Einschränkungen
 
 ### 🔑 Key-Einschränkungen
-- **Maximale Länge: 14 Zeichen**
+- **Maximale Länge: 13 Zeichen**
 - **Reservierte Keys** (können nicht verwendet werden):
   - `ssid`, `pwd`, `hostname`
   - `useStaticIP`, `ip`, `gateway`, `subnet`, `dns`
@@ -330,7 +328,7 @@ void setup() {
     // Custom Page hinzufügen
     wwm.addPage("Status", "/status", handleMyPage);
     
-    // Custom Data speichern (Key max. 14 Zeichen!)
+    // Custom Data speichern (Key max. 13 Zeichen!)
     wwm.saveCustomData("temp_max", 25.5f);
     wwm.saveCustomData("alerts", true);
     wwm.saveCustomData("count", 42);

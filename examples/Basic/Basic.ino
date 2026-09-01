@@ -13,7 +13,7 @@
   3. Öffnen Sie http://192.168.4.1
   4. Konfigurieren Sie Ihr WLAN über das Web-Interface
   
-  Version: 1.2.1
+  Version: 2.0.3
   Autor: McUtty
 */
 

@@ -28,7 +28,7 @@ A comprehensive ESP32 framework for Wi-Fi management with a web interface, offer
 
 ### Manual Installation
 
-1. Download the latest release
+1. Download the latest version from [Releases](https://github.com/McUtty/WiFiWebManager/releases)
 2. Extract the ZIP file into your `Arduino/libraries` folder
 3. Restart Arduino IDE
 
@@ -128,7 +128,7 @@ wifiManager.addPage("Settings", "/settings",
 
 ---
 
-### Use Custom Data (key max 14 characters)
+### Use Custom Data (key max. 13 characters)
 
 ```cpp
 // Store different data types
@@ -256,9 +256,7 @@ void removeCustomData(const String& key);
 See the `/examples` folder for complete demos:
 
 * **Basic** – minimal setup
-* **CustomPages** – user-defined web pages
-* **SensorData** – IoT sensor with configuration
-* **SmartSwitch** – smart home device
+* **Test** – custom pages, custom data and debug output (demo with simulated values)
 
 ---
 
@@ -271,14 +269,14 @@ MIT License – see LICENSE for details
 ## 🤝 Contributing
 
 Contributions are welcome!
-Please read `CONTRIBUTING.md` for details.
+Please open an issue or a pull request on GitHub.
 
 ---
 
 ## 📞 Support
 
-* **Issues:** via GitHub Issues
-* **Discussions:** via GitHub Discussions
+* **Issues:** [GitHub Issues](https://github.com/McUtty/WiFiWebManager/issues)
+* **Discussions:** [GitHub Discussions](https://github.com/McUtty/WiFiWebManager/discussions)
 
 ---
 
@@ -334,10 +332,10 @@ Please read `CONTRIBUTING.md` for details.
 
 | Function                     | Description       | Parameters                 | Constraints           |
 | ---------------------------- | ----------------- | -------------------------- | --------------------- |
-| `saveCustomData(key, value)` | Stores a `String` | `String key, String value` | Key max 14 characters |
-| `saveCustomData(key, value)` | Stores an `int`   | `String key, int value`    | Key max 14 characters |
-| `saveCustomData(key, value)` | Stores a `bool`   | `String key, bool value`   | Key max 14 characters |
-| `saveCustomData(key, value)` | Stores a `float`  | `String key, float value`  | Key max 14 characters |
+| `saveCustomData(key, value)` | Stores a `String` | `String key, String value` | Key max. 13 characters |
+| `saveCustomData(key, value)` | Stores an `int`   | `String key, int value`    | Key max. 13 characters |
+| `saveCustomData(key, value)` | Stores a `bool`   | `String key, bool value`   | Key max. 13 characters |
+| `saveCustomData(key, value)` | Stores a `float`  | `String key, float value`  | Key max. 13 characters |
 
 #### Loading (Getters)
 
@@ -371,7 +369,7 @@ Please read `CONTRIBUTING.md` for details.
 
 #### 🔑 Key Constraints
 
-* **Max length:** 14 characters
+* **Max length:** 13 characters
 * **Reserved keys (do not use):**
   `ssid`, `pwd`, `hostname`,
   `useStaticIP`, `ip`, `gateway`, `subnet`, `dns`,
@@ -417,7 +415,7 @@ void setup() {
     // Add custom page
     wwm.addPage("Status", "/status", handleMyPage);
 
-    // Save custom data (key max 14 chars!)
+    // Save custom data (key max. 13 chars!)
     wwm.saveCustomData("temp_max", 25.5f);
     wwm.saveCustomData("alerts", true);
     wwm.saveCustomData("count", 42);

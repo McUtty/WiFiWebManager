@@ -59,7 +59,7 @@ void loop() {
 
 void loadCustomSettings() {
     // Lade Custom Data mit Default-Werten
-    sensorInterval = wifiManager.loadCustomDataInt("sensorInterval", 5000);
+    sensorInterval = wifiManager.loadCustomDataInt("sensorIntv", 5000);  // Key max. 13 Zeichen!
     debugMode = wifiManager.loadCustomDataBool("debugMode", false);
     calibrationFactor = wifiManager.loadCustomDataFloat("calibration", 1.0);
     deviceName = wifiManager.loadCustomData("deviceName", "TestDevice");
@@ -74,7 +74,7 @@ void loadCustomSettings() {
 
 void saveCustomSettings() {
     // Speichere alle Custom Data
-    wifiManager.saveCustomData("sensorInterval", sensorInterval);
+    wifiManager.saveCustomData("sensorIntv", sensorInterval);
     wifiManager.saveCustomData("debugMode", debugMode);
     wifiManager.saveCustomData("calibration", calibrationFactor);
     wifiManager.saveCustomData("deviceName", deviceName);

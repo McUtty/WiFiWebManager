@@ -1,4 +1,5 @@
 #include "WiFiWebManager.h"
+#include "WiFiWebManagerFavicon.h"
 
 // Namespace und Meta-Key für Custom Data (zentral definiert, damit
 // Speichern/Laden und clearAllConfig garantiert denselben Namespace nutzen)
@@ -644,6 +645,8 @@ String WiFiWebManager::htmlWrap(const String& menutitle, const String& currentPa
     )rawliteral";
     String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1'>";
     html += "<title>" + menutitle + "</title>";
+    html += "<link rel='icon' type='image/png' sizes='32x32' href='/favicon-32.png'>";
+    html += "<link rel='icon' type='image/png' sizes='16x16' href='/favicon-16.png'>";
     html += css;
     html += "</head><body><div class='centerbox'>";
     html += renderMenu(currentPath);
@@ -688,6 +691,24 @@ void WiFiWebManager::removePage(const String& path) {
 }
 
 void WiFiWebManager::setupWebServer() {
+    // Favicon (aus PROGMEM, mit Cache-Header). /favicon.ico wird von Browsern
+    // automatisch angefragt; die 16/32-Varianten referenzieren die <link>-Tags.
+    server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request){
+        AsyncWebServerResponse *r = request->beginResponse_P(200, "image/png", FAVICON_PNG_32, FAVICON_PNG_32_LEN);
+        r->addHeader("Cache-Control", "max-age=86400");
+        request->send(r);
+    });
+    server.on("/favicon-32.png", HTTP_GET, [](AsyncWebServerRequest *request){
+        AsyncWebServerResponse *r = request->beginResponse_P(200, "image/png", FAVICON_PNG_32, FAVICON_PNG_32_LEN);
+        r->addHeader("Cache-Control", "max-age=86400");
+        request->send(r);
+    });
+    server.on("/favicon-16.png", HTTP_GET, [](AsyncWebServerRequest *request){
+        AsyncWebServerResponse *r = request->beginResponse_P(200, "image/png", FAVICON_PNG_16, FAVICON_PNG_16_LEN);
+        r->addHeader("Cache-Control", "max-age=86400");
+        request->send(r);
+    });
+
     // Home-Seite mit Status
     server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request){
         if (rootGetHandler) {
