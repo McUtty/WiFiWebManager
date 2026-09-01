@@ -10,7 +10,7 @@ Ein umfassendes ESP32-Framework für WLAN-Management mit Web-Interface, das robu
 - **Erweiterbares Web-Interface**: Einfaches Hinzufügen eigener Konfigurationsseiten
 - **Custom Data API**: Persistente Speicherung verschiedener Datentypen
 - **Debug-Modus**: Ein/ausschaltbare Debug-Ausgaben für Entwicklung
-- **OTA-Updates**: Firmware-Updates über Web-Interface
+- **OTA-Updates**: Firmware-Updates über Web-Interface, mit Anzeige der App-Version auf der Update-Seite (`setFirmwareVersion`)
 - **Responsive Design**: Modernes Web-UI für Desktop und Mobile
 
 ## 📦 Installation
@@ -47,6 +47,9 @@ void setup() {
     
     // Optional: Standard-Hostname setzen
     wifiManager.setDefaultHostname("MeinESP32");
+
+    // Optional: Version, die auf der /update-Seite angezeigt wird
+    wifiManager.setFirmwareVersion("1.0.0");
     
     wifiManager.begin();
 }
@@ -66,7 +69,7 @@ Nach dem Start ist das Web-Interface verfügbar unter:
 - `/` - Status und Übersicht (kann vom Inhalt angepasst werden)
 - `/wlan` - WLAN-Konfiguration (fix)
 - `/ntp` - NTP-Einstellungen (fix)
-- `/update` - Firmware-Update (fix)
+- `/update` - OTA-Firmware-Update; zeigt Version (fix)
 - `/reset` - Reset-Optionen (fix)
 
 ## 🔧 Erweiterte Nutzung
@@ -153,6 +156,15 @@ void setDefaultHostname(const String& hostname);  // Standard setzen
 String getHostname();                             // Aktuellen abrufen
 ```
 
+### Firmware-Version
+```cpp
+void setFirmwareVersion(const String& version);   // Version für /update-Seite setzen
+```
+Einmal in `setup()` aufrufen, damit die Firmware-Version im Web-UI sichtbar ist:
+```cpp
+wifiManager.setFirmwareVersion("1.0.0");
+```
+
 ### Debug-Funktionen
 ```cpp
 void setDebugMode(bool enabled);  // Debug ein/aus
@@ -184,6 +196,7 @@ float loadCustomDataFloat(const String& key, float defaultValue = 0.0);
 // Verwaltung
 bool hasCustomData(const String& key);
 void removeCustomData(const String& key);
+std::vector<String> getCustomDataKeys();  // Alle gespeicherten Custom-Keys auflisten
 ```
 
 ## ⚠️ Wichtige Hinweise
@@ -236,8 +249,9 @@ Beiträge sind willkommen! Bitte eröffnen Sie ein Issue oder einen Pull Request
 |----------|--------------|-----------|----------|
 | `setDefaultHostname(hostname)` | Setzt Standard-Hostname aus Code | `String hostname` | `void` |
 | `getHostname()` | Gibt aktuellen Hostname zurück | - | `String` |
-| `clearWiFiConfig()` | Löscht nur WiFi-Daten (SSID/Passwort) | - | `void` |
-| `clearAllConfig()` | Löscht alle Einstellungen (Werks-Reset) | - | `void` |
+| `setFirmwareVersion(version)` | App-Version auf der `/update`-Seite | `String version` | `void` |
+
+> Werks-Reset erfolgt über die öffentliche Methode `reset()` (siehe Grundlegende Methoden). WLAN-only- bzw. Voll-Reset lassen sich zusätzlich über den Hardware-Reset-Button (GPIO 0) auslösen.
 
 ## 📄 Custom Pages (Webseiten)
 

@@ -12,7 +12,7 @@ A comprehensive ESP32 framework for Wi-Fi management with a web interface, offer
 * **Extensible Web Interface:** Easily add your own configuration pages
 * **Custom Data API:** Persistent storage for multiple data types
 * **Debug Mode:** Enable or disable debug output during development
-* **OTA Updates:** Firmware updates via web interface
+* **OTA Updates:** Firmware updates via web interface, with the application version shown on the update page (`setFirmwareVersion`)
 * **Responsive Design:** Modern web UI for both desktop and mobile
 
 ---
@@ -58,6 +58,9 @@ void setup() {
     
     // Optional: Set default hostname
     wifiManager.setDefaultHostname("MyESP32");
+
+    // Optional: Version shown on the /update page
+    wifiManager.setFirmwareVersion("1.0.0");
     
     wifiManager.begin();
 }
@@ -83,7 +86,7 @@ After startup, the web interface is available at:
 | `/`       | Status and overview (customizable) |
 | `/wlan`   | Wi-Fi configuration (fixed)        |
 | `/ntp`    | NTP time settings (fixed)          |
-| `/update` | Firmware update (fixed)            |
+| `/update` | OTA firmware update; shows version (fixed) |
 | `/reset`  | Reset options (fixed)              |
 
 ---
@@ -193,6 +196,20 @@ bool isDebugActive = wifiManager.getDebugMode();
 
 ---
 
+### Firmware Version
+
+| Function                                    | Description                                              |
+| ------------------------------------------- | -------------------------------------------------------- |
+| `setFirmwareVersion(const String& version)` | Sets the application version shown on the `/update` page |
+
+Call this once in `setup()` so the firmware version is visible in the web UI:
+
+```cpp
+wifiManager.setFirmwareVersion("1.0.0");
+```
+
+---
+
 ### Debug Functions
 
 | Function                     | Description                 |
@@ -238,6 +255,7 @@ float loadCustomDataFloat(const String& key, float defaultValue = 0.0);
 ```cpp
 bool hasCustomData(const String& key);
 void removeCustomData(const String& key);
+std::vector<String> getCustomDataKeys();  // list all stored custom keys
 ```
 
 ---
@@ -310,8 +328,9 @@ Please open an issue or a pull request on GitHub.
 |---------------------------------|-------------------------------------------|------------------------|----------|
 | `setDefaultHostname(hostname)`  | Sets default hostname from code           | `String hostname`      | `void`   |
 | `getHostname()`                 | Returns current hostname                  | –                      | `String` |
-| `clearWiFiConfig()`             | Erases only Wi-Fi credentials (SSID/PWD)  | –                      | `void`   |
-| `clearAllConfig()`              | Erases all settings (factory reset)       | –                      | `void`   |
+| `setFirmwareVersion(version)`   | App version shown on the `/update` page   | `String version`       | `void`   |
+
+> Factory reset is performed with the public `reset()` method (see Basic Methods). Wi-Fi-only and full erase are also triggered by the hardware reset button (GPIO 0).
 
 ---
 
