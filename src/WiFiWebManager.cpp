@@ -424,6 +424,10 @@ String WiFiWebManager::getHostname() {
     return hostname.length() > 0 ? hostname : defaultHostname;
 }
 
+void WiFiWebManager::setFirmwareVersion(const String& version) {
+    firmwareVersion = version;
+}
+
 // Erweiterte Custom Data API
 void WiFiWebManager::saveCustomData(const String& key, const String& value) {
     if (!isValidCustomKey(key)) return;
@@ -896,7 +900,10 @@ void WiFiWebManager::setupWebServer() {
     server.on("/update", HTTP_GET, [this](AsyncWebServerRequest *request){
         String html = "<h1>Firmware Update</h1>";
         html += "<div class='status-box'>";
-        html += "<p><strong>Aktuelle Firmware:</strong> " + String(__DATE__) + " " + String(__TIME__) + "</p>";
+        if (firmwareVersion.length() > 0) {
+            html += "<p><strong>Firmware-Version:</strong> " + firmwareVersion + "</p>";
+        }
+        html += "<p><strong>Build:</strong> " + String(__DATE__) + " " + String(__TIME__) + "</p>";
         html += "<p><strong>Freier Speicher:</strong> " + String(ESP.getFreeHeap()) + " Bytes</p>";
         html += "</div>";
         

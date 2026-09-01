@@ -40,6 +40,9 @@ public:
     void setDefaultHostname(const String& hostname);
     String getHostname();
 
+    // Firmware-Version der Anwendung (wird auf der /update-Seite angezeigt)
+    void setFirmwareVersion(const String& version);
+
     // Debug-Modus Management
     void setDebugMode(bool enabled);
     bool getDebugMode();
@@ -55,6 +58,7 @@ private:
 
     String ssid, password, hostname;
     String defaultHostname = "";  // Standard-Hostname aus Code
+    String firmwareVersion = "";  // App-Version (via setFirmwareVersion)
     String ip, gateway, subnet, dns;
     bool useStaticIP = false;
     bool shouldReboot = false;
