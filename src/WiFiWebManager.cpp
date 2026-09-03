@@ -49,6 +49,9 @@ void WiFiWebManager::begin() {
     handleNTP();
     setupWebServer();
     ArduinoOTA.begin();
+
+    ledStarted = true;
+    statusLedBegin();   // no-op, solange die LED nicht aktiviert wurde
 }
 
 void WiFiWebManager::loop() {
@@ -60,6 +63,7 @@ void WiFiWebManager::loop() {
     
     handleResetButton();
     ArduinoOTA.handle();
+    statusLedUpdate();   // no-op, solange die LED nicht aktiviert wurde
 
     // WLAN-Scan bei Bedarf (Web-Handler hat scanRequested gesetzt) oder im
     // AP-Modus periodisch ausführen. Läuft bewusst im loop()-Task – der Scan
@@ -379,6 +383,118 @@ void WiFiWebManager::setDebugMode(bool enabled) {
 
 bool WiFiWebManager::getDebugMode() {
     return debugMode;
+}
+
+// ---------------------------------------------------------------------------
+// WLAN-Status-LED (WS2812) — optional, generisch. Ansteuerung über die
+// Core-Funktion neopixelWrite(); keine zusätzliche Bibliothek.
+// ---------------------------------------------------------------------------
+void WiFiWebManager::enableStatusLed(uint8_t pin, uint8_t brightness) {
+    ledEnabled    = true;
+    ledPin        = pin;
+    ledBrightness = brightness;
+    if (ledStarted) statusLedBegin();   // zur Laufzeit sofort initialisieren
+}
+
+void WiFiWebManager::disableStatusLed() {
+    if (ledEnabled && ledStarted) statusLedApply(0, 0, 0);  // LED ausschalten
+    ledEnabled = false;
+}
+
+void WiFiWebManager::setStatusLedPin(uint8_t pin) {
+    ledPin = pin;
+    if (ledEnabled && ledStarted) statusLedBegin();
+}
+
+void WiFiWebManager::setStatusLedBrightness(uint8_t brightness) {
+    ledBrightness = brightness;
+    ledForce = true;   // aktuelle Farbe mit neuer Helligkeit neu ausgeben
+}
+
+void WiFiWebManager::setStatusLedRssiThreshold(int dbm) {
+    ledRssiGoodDbm = dbm;
+    ledForce = true;
+}
+
+void WiFiWebManager::setStatusLedSelfTest(bool enabled) {
+    ledSelfTest = enabled;
+}
+
+void WiFiWebManager::statusLedBegin() {
+    if (!ledEnabled) return;
+    debugPrintf("StatusLed: aktiviert an GPIO %u (Helligkeit %u)\n", ledPin, ledBrightness);
+
+    // Optionaler, sichtbarer Selbsttest (blockierend — nur hier, nicht im loop()):
+    // rot -> grün -> blau -> aus. Leuchtet nichts, sitzt die LED nicht an diesem
+    // Pin bzw. bekommt kein Signal.
+    if (ledSelfTest) {
+        statusLedApply(ledBrightness, 0, 0); delay(300);
+        statusLedApply(0, ledBrightness, 0); delay(300);
+        statusLedApply(0, 0, ledBrightness); delay(300);
+        statusLedApply(0, 0, 0);             delay(150);
+    }
+
+    ledMode    = LedMode::Lost;
+    ledBlinkOn = false;
+    ledForce   = false;
+    ledLastMs  = 0;
+    statusLedApply(ledBrightness, 0, 0);   // Startzustand: rot
+}
+
+void WiFiWebManager::statusLedUpdate() {
+    if (!ledEnabled) return;
+
+    const unsigned long now = millis();
+    if (!ledForce && now - ledLastMs < LED_UPDATE_MS) return;
+    ledLastMs = now;
+
+    // Zielzustand aus WLAN-Status/-Modus ableiten.
+    LedMode target;
+    if (WiFi.status() == WL_CONNECTED) {
+        target = (WiFi.RSSI() >= ledRssiGoodDbm) ? LedMode::Connected : LedMode::Weak;
+    } else if (WiFi.getMode() == WIFI_AP) {
+        target = LedMode::AccessPoint;   // Setup-Portal -> rot blinkend
+    } else {
+        target = LedMode::Lost;          // STA verbindet (noch) nicht -> rot
+    }
+
+    // AP-Modus: rot blinkend — bei jedem Tick die Phase umschalten.
+    if (target == LedMode::AccessPoint) {
+        if (ledMode != LedMode::AccessPoint) {
+            debugPrintln("StatusLed: AP (rot blinkend)");
+            ledMode    = LedMode::AccessPoint;
+            ledBlinkOn = true;
+        } else {
+            ledBlinkOn = !ledBlinkOn;
+        }
+        statusLedApply(ledBlinkOn ? ledBrightness : 0, 0, 0);
+        ledForce = false;
+        return;
+    }
+
+    // Statische Zustände: nur bei Wechsel (oder erzwungen) schreiben.
+    if (target != ledMode || ledForce) {
+        ledMode = target;
+        switch (target) {
+            case LedMode::Connected:
+                debugPrintln("StatusLed: gruen");
+                statusLedApply(0, ledBrightness, 0);
+                break;
+            case LedMode::Weak:
+                debugPrintln("StatusLed: gelb");
+                statusLedApply(ledBrightness, ledBrightness, 0);
+                break;
+            default:
+                debugPrintln("StatusLed: rot");
+                statusLedApply(ledBrightness, 0, 0);
+                break;
+        }
+    }
+    ledForce = false;
+}
+
+void WiFiWebManager::statusLedApply(uint8_t r, uint8_t g, uint8_t b) {
+    neopixelWrite(ledPin, r, g, b);
 }
 
 // Debug-Hilfsfunktionen

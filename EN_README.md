@@ -13,6 +13,7 @@ A comprehensive ESP32 framework for Wi-Fi management with a web interface, offer
 * **Custom Data API:** Persistent storage for multiple data types
 * **Debug Mode:** Enable or disable debug output during development
 * **OTA Updates:** Firmware updates via web interface, with the application version shown on the update page (`setFirmwareVersion`)
+* **WiFi Status LED** (optional): an addressable on-board RGB LED (WS2812) reflects the connection status (green/yellow/red, AP = blinking red) — freely assignable pin, toggled on/off via a function call
 * **Responsive Design:** Modern web UI for both desktop and mobile
 
 ---
@@ -175,6 +176,40 @@ bool isDebugActive = wifiManager.getDebugMode();
 
 ---
 
+## 💡 WiFi Status LED (optional)
+
+Many ESP32-S3 boards carry an addressable **on-board RGB LED (WS2812)**.
+WiFiWebManager can mirror the WiFi status on it — **disabled by default**, enabled
+via a function call with a freely assignable pin. No extra driver required (uses the
+ESP32 core's `neopixelWrite()`).
+
+| Color | Meaning |
+|---|---|
+| 🟢 green | connected, good signal (RSSI ≥ threshold, default −70 dBm) |
+| 🟡 yellow | connected, weak signal |
+| 🔴 red | connection lost / not (yet) connected as station |
+| 🔴 blinking red | AP setup mode (`ESP32_SETUP`) |
+
+```cpp
+void setup() {
+    wifiManager.enableStatusLed(48);       // enable + GPIO (e.g. 48 on the S3-DevKitC-1)
+    // optional:
+    wifiManager.setStatusLedBrightness(40);      // 0..255 (default 40)
+    wifiManager.setStatusLedRssiThreshold(-70);  // good/weak threshold (dBm)
+    wifiManager.setStatusLedSelfTest(true);      // boot self-test red/green/blue
+    wifiManager.begin();
+}
+```
+
+Pin and on/off can also be changed **at runtime**:
+
+```cpp
+wifiManager.disableStatusLed();     // LED off
+wifiManager.enableStatusLed(38);    // back on, now on GPIO 38
+```
+
+---
+
 ## 📋 API Reference
 
 ### Basic Functions
@@ -216,6 +251,19 @@ wifiManager.setFirmwareVersion("1.0.0");
 | ---------------------------- | --------------------------- |
 | `setDebugMode(bool enabled)` | Enable/disable debug output |
 | `getDebugMode()`             | Get debug mode state        |
+
+---
+
+### WiFi Status LED
+
+| Function | Description |
+| -------- | ----------- |
+| `enableStatusLed(uint8_t pin, uint8_t brightness = 40)` | Enable and assign the LED pin |
+| `disableStatusLed()`                    | Turn the LED off              |
+| `setStatusLedPin(uint8_t pin)`          | Reassign the pin              |
+| `setStatusLedBrightness(uint8_t)`       | Per-channel brightness 0..255 |
+| `setStatusLedRssiThreshold(int dbm)`    | Good/weak threshold (default −70) |
+| `setStatusLedSelfTest(bool)`            | Boot self-test red/green/blue |
 
 ---
 
@@ -381,6 +429,25 @@ Please open an issue or a pull request on GitHub.
 | ----------------------- | ----------------------------- | -------------- | ------ |
 | `setDebugMode(enabled)` | Enables/disables debug output | `bool enabled` | `void` |
 | `getDebugMode()`        | Returns debug mode state      | –              | `bool` |
+
+---
+
+### 💡 WiFi Status LED (optional)
+
+Disabled by default. Drives an addressable on-board RGB LED (WS2812) via the ESP32
+core's `neopixelWrite()` — no extra library.
+
+| Function                          | Description                             | Parameters                  | Return |
+| --------------------------------- | --------------------------------------- | --------------------------- | ------ |
+| `enableStatusLed(pin, brightness)`| Enable and assign the LED pin           | `uint8_t pin, uint8_t bri=40` | `void` |
+| `disableStatusLed()`              | Turn the LED off                        | –                           | `void` |
+| `setStatusLedPin(pin)`            | Reassign the pin                        | `uint8_t pin`               | `void` |
+| `setStatusLedBrightness(b)`       | Per-channel brightness (0..255)         | `uint8_t b`                 | `void` |
+| `setStatusLedRssiThreshold(dbm)`  | Good/weak threshold (default −70 dBm)   | `int dbm`                   | `void` |
+| `setStatusLedSelfTest(enabled)`   | Boot self-test red/green/blue           | `bool enabled`              | `void` |
+
+Colors: 🟢 green = connected (good), 🟡 yellow = connected (weak), 🔴 red = lost,
+🔴 blinking red = AP setup mode.
 
 ---
 

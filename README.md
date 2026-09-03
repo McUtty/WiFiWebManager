@@ -11,6 +11,7 @@ Ein umfassendes ESP32-Framework für WLAN-Management mit Web-Interface, das robu
 - **Custom Data API**: Persistente Speicherung verschiedener Datentypen
 - **Debug-Modus**: Ein/ausschaltbare Debug-Ausgaben für Entwicklung
 - **OTA-Updates**: Firmware-Updates über Web-Interface, mit Anzeige der App-Version auf der Update-Seite (`setFirmwareVersion`)
+- **WLAN-Status-LED** (optional): adressierbare On-Board-RGB-LED (WS2812) zeigt den Verbindungsstatus (grün/gelb/rot, AP = rot blinkend) — Pin frei wählbar, per Funktion ein-/ausschaltbar
 - **Responsive Design**: Modernes Web-UI für Desktop und Mobile
 
 ## 📦 Installation
@@ -141,6 +142,38 @@ wifiManager.setDebugMode(true);
 bool isDebugActive = wifiManager.getDebugMode();
 ```
 
+## 💡 WLAN-Status-LED (optional)
+
+Viele ESP32-S3-Boards haben eine adressierbare **On-Board-RGB-LED (WS2812)**. Der
+WiFiWebManager kann darauf den WLAN-Status spiegeln — **standardmäßig deaktiviert**,
+per Funktion mit frei wählbarem Pin einschaltbar. Kein zusätzlicher Treiber nötig
+(nutzt `neopixelWrite()` aus dem ESP32-Core).
+
+| Farbe | Bedeutung |
+|---|---|
+| 🟢 grün | verbunden, gute Feldstärke (RSSI ≥ Schwelle, Default −70 dBm) |
+| 🟡 gelb | verbunden, schwache Feldstärke |
+| 🔴 rot | Verbindung verloren / (noch) kein STA-Connect |
+| 🔴 rot blinkend | AP-Setup-Modus (`ESP32_SETUP`) |
+
+```cpp
+void setup() {
+    wifiManager.enableStatusLed(48);       // aktivieren + GPIO (z. B. 48 beim S3-DevKitC-1)
+    // optional:
+    wifiManager.setStatusLedBrightness(40);      // 0..255 (Default 40)
+    wifiManager.setStatusLedRssiThreshold(-70);  // Grenze gut/schwach (dBm)
+    wifiManager.setStatusLedSelfTest(true);      // Boot-Selbsttest rot/grün/blau
+    wifiManager.begin();
+}
+```
+
+Ein-/Ausschalten und Pin lassen sich auch **zur Laufzeit** ändern:
+
+```cpp
+wifiManager.disableStatusLed();     // LED aus
+wifiManager.enableStatusLed(38);    // wieder an, jetzt an GPIO 38
+```
+
 ## 📋 API-Referenz
 
 ### Basis-Funktionen
@@ -169,6 +202,16 @@ wifiManager.setFirmwareVersion("1.0.0");
 ```cpp
 void setDebugMode(bool enabled);  // Debug ein/aus
 bool getDebugMode();              // Status abrufen
+```
+
+### WLAN-Status-LED
+```cpp
+void enableStatusLed(uint8_t pin, uint8_t brightness = 40);  // aktivieren + Pin
+void disableStatusLed();                                     // ausschalten
+void setStatusLedPin(uint8_t pin);                           // Pin neu zuweisen
+void setStatusLedBrightness(uint8_t brightness);             // 0..255
+void setStatusLedRssiThreshold(int dbm);                     // gut/schwach, Default -70
+void setStatusLedSelfTest(bool enabled);                     // Boot-Selbsttest
 ```
 
 ### Seiten-Management

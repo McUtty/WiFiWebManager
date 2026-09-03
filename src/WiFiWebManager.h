@@ -47,6 +47,22 @@ public:
     void setDebugMode(bool enabled);
     bool getDebugMode();
 
+    // WLAN-Status-LED (optional): eine adressierbare On-Board-RGB-LED (WS2812)
+    // spiegelt den Verbindungsstatus. Standardmäßig DEAKTIVIERT — per
+    // enableStatusLed() mit Pin aktivieren (idealerweise vor begin(), geht aber
+    // auch zur Laufzeit). Angesteuert über neopixelWrite() aus dem ESP32-Core,
+    // keine zusätzliche Bibliothek.
+    //   grün         = verbunden, gute Feldstärke (RSSI >= Schwelle)
+    //   gelb         = verbunden, schwache Feldstärke
+    //   rot          = Verbindung verloren / (noch) kein STA-Connect
+    //   rot blinkend = AP-Setup-Modus
+    void enableStatusLed(uint8_t pin, uint8_t brightness = 40);
+    void disableStatusLed();
+    void setStatusLedPin(uint8_t pin);
+    void setStatusLedBrightness(uint8_t brightness);
+    void setStatusLedRssiThreshold(int dbm);   // Grenze gut/schwach, Default -70
+    void setStatusLedSelfTest(bool enabled);   // Boot-Selbsttest rot/grün/blau
+
     void reset();
 
 private:
@@ -68,6 +84,23 @@ private:
 
     // Debug-Modus
     bool debugMode = false;
+
+    // WLAN-Status-LED (WS2812) — siehe enableStatusLed()
+    enum class LedMode : uint8_t { Connected, Weak, Lost, AccessPoint };
+    bool          ledEnabled     = false;   // per enableStatusLed() aktiviert
+    bool          ledStarted     = false;   // begin() bereits gelaufen
+    bool          ledSelfTest    = false;   // Boot-Selbsttest ausführen
+    uint8_t       ledPin         = 48;      // GPIO der WS2812
+    uint8_t       ledBrightness  = 40;      // Deckelung je Kanal (0..255)
+    int           ledRssiGoodDbm = -70;     // Grenze gut/schwach
+    LedMode       ledMode        = LedMode::Lost;
+    bool          ledBlinkOn     = false;   // Blink-Phase im AP-Modus
+    bool          ledForce       = false;   // erzwingt Neuausgabe (Pin/Helligkeit geändert)
+    unsigned long ledLastMs      = 0;
+    static const unsigned long LED_UPDATE_MS = 500;  // Auswerte- und Blink-Takt
+    void statusLedBegin();
+    void statusLedUpdate();
+    void statusLedApply(uint8_t r, uint8_t g, uint8_t b);
 
     // Reset-Button Management
     static const int RESET_PIN = 0;

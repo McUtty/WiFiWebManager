@@ -29,6 +29,12 @@ loadCustomDataFloat	KEYWORD2
 hasCustomData	KEYWORD2
 removeCustomData	KEYWORD2
 getCustomDataKeys	KEYWORD2
+enableStatusLed	KEYWORD2
+disableStatusLed	KEYWORD2
+setStatusLedPin	KEYWORD2
+setStatusLedBrightness	KEYWORD2
+setStatusLedRssiThreshold	KEYWORD2
+setStatusLedSelfTest	KEYWORD2
 reset	KEYWORD2
 
 #######################################
