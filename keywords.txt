@@ -19,6 +19,7 @@ getDebugMode	KEYWORD2
 setDefaultHostname	KEYWORD2
 getHostname	KEYWORD2
 setFirmwareVersion	KEYWORD2
+setOnUpdateStart	KEYWORD2
 addPage	KEYWORD2
 removePage	KEYWORD2
 saveCustomData	KEYWORD2

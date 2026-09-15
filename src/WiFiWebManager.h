@@ -43,6 +43,11 @@ public:
     // Firmware-Version der Anwendung (wird auf der /update-Seite angezeigt)
     void setFirmwareVersion(const String& version);
 
+    // Wird VOR dem ersten Flash-Schreiben aufgerufen (OTA via /update UND
+    // ArduinoOTA/espota). Consumer stoppt hier stoerende Peripherie
+    // (z. B. Kamera deinit, Ausgaenge sicher). Optional.
+    void setOnUpdateStart(std::function<void()> cb);
+
     // Debug-Modus Management
     void setDebugMode(bool enabled);
     bool getDebugMode();
@@ -75,6 +80,7 @@ private:
     String ssid, password, hostname;
     String defaultHostname = "";  // Standard-Hostname aus Code
     String firmwareVersion = "";  // App-Version (via setFirmwareVersion)
+    std::function<void()> onUpdateStart = nullptr;
     String ip, gateway, subnet, dns;
     bool useStaticIP = false;
     bool shouldReboot = false;

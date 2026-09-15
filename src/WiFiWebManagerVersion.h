@@ -1,9 +1,9 @@
 #pragma once
 
 // WiFiWebManager Version Information
-#define WIFIWEB_MANAGER_VERSION "2.1.0"
+#define WIFIWEB_MANAGER_VERSION "2.2.0"
 #define WIFIWEB_MANAGER_VERSION_MAJOR 2
-#define WIFIWEB_MANAGER_VERSION_MINOR 1
+#define WIFIWEB_MANAGER_VERSION_MINOR 2
 #define WIFIWEB_MANAGER_VERSION_PATCH 0
 
 // Build Information  

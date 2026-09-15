@@ -48,6 +48,7 @@ void WiFiWebManager::begin() {
     
     handleNTP();
     setupWebServer();
+    ArduinoOTA.onStart([this]() { if (onUpdateStart) onUpdateStart(); });
     ArduinoOTA.begin();
 
     ledStarted = true;
@@ -543,6 +544,8 @@ String WiFiWebManager::getHostname() {
 void WiFiWebManager::setFirmwareVersion(const String& version) {
     firmwareVersion = version;
 }
+
+void WiFiWebManager::setOnUpdateStart(std::function<void()> cb) { onUpdateStart = cb; }
 
 // Erweiterte Custom Data API
 void WiFiWebManager::saveCustomData(const String& key, const String& value) {
@@ -1055,6 +1058,7 @@ void WiFiWebManager::setupWebServer() {
         [this](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
             if (!index) {
                 debugPrintf("Update gestartet: %s\n", filename.c_str());
+                if (onUpdateStart) onUpdateStart();
                 if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
                     if (debugMode) Update.printError(Serial);
                 }

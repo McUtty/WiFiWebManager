@@ -245,6 +245,20 @@ wifiManager.setFirmwareVersion("1.0.0");
 
 ---
 
+### OTA Callback (stop peripherals before flashing)
+
+| Function                                       | Description                                                                          |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `setOnUpdateStart(std::function<void()> cb)`   | Called right before the first flash write (OTA via `/update` AND ArduinoOTA/espota)  |
+
+Use it to stop peripherals that interfere with flashing (e.g. a camera driver/DMA) before the write begins:
+
+```cpp
+wifiManager.setOnUpdateStart([]() { camera.deinit(); });
+```
+
+---
+
 ### Debug Functions
 
 | Function                     | Description                 |

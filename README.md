@@ -198,6 +198,15 @@ Einmal in `setup()` aufrufen, damit die Firmware-Version im Web-UI sichtbar ist:
 wifiManager.setFirmwareVersion("1.0.0");
 ```
 
+### OTA-Callback (Peripherie vor dem Flash stoppen)
+```cpp
+void setOnUpdateStart(std::function<void()> cb);
+```
+Wird **direkt vor dem ersten Flash-Schreiben** aufgerufen — sowohl bei OTA über `/update` als auch über ArduinoOTA/espota. Damit kann der Consumer störende Peripherie (z. B. Kamera-Treiber/DMA) rechtzeitig stoppen, bevor der Flash beschrieben wird:
+```cpp
+wifiManager.setOnUpdateStart([]() { camera.deinit(); });
+```
+
 ### Debug-Funktionen
 ```cpp
 void setDebugMode(bool enabled);  // Debug ein/aus
