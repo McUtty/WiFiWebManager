@@ -174,6 +174,56 @@ wifiManager.disableStatusLed();     // LED aus
 wifiManager.enableStatusLed(38);    // wieder an, jetzt an GPIO 38
 ```
 
+## 🧵 FreeRTOS-Service-Task + Watchdog (ab v3.0.0)
+
+Ab v3.0.0 erledigt die Lib ihre Wartung (Reset-Button, OTA-Handle, Status-LED,
+WLAN-Scan/-Reconnect, OTA-Stall-Check) **standardmäßig in einer eigenen
+FreeRTOS-Task `wfwm_svc`** (Core 0). Damit blockieren WLAN-Scan/-Reconnect nicht
+mehr deinen `loop()`.
+
+**Rückwärtskompatibel:** Die öffentliche `loop()` bleibt bestehen und wird zum
+**No-Op**, solange die Service-Task läuft — bestehende Sketches, die `loop()`
+aufrufen, funktionieren unverändert weiter.
+
+```cpp
+// Optional VOR begin():
+wifiManager.setServiceTask(false);   // exakt bisheriges Verhalten (du rufst loop() selbst)
+```
+
+### Task-Watchdog (Default AN)
+Die Lib bringt einen Task-Watchdog mit und überwacht damit **nur die
+Service-Task** — ein langer Consumer-`loop()` löst also **keinen** Reset aus.
+Die Reset-Ursache wird beim Boot geloggt (u. a. klar als `WATCHDOG-RESET`).
+
+```cpp
+// Optional VOR begin():
+wifiManager.enableWatchdog(true, 30, true);  // an, Timeout 30 s, panic=true (Default)
+wifiManager.enableWatchdog(false);           // aus
+
+// Eigene Consumer-Tasks einhängen (statt selbst mit esp_task_wdt zu hantieren):
+wifiManager.watchdogAddCurrentTask();     // aktuelle Task eintragen
+wifiManager.watchdogFeedCurrentTask();    // füttern
+wifiManager.watchdogRemoveCurrentTask();  // austragen
+```
+
+### OTA-Selbstheilung bei abgebrochenem Upload
+Reißt ein `/update`-Upload nach `setOnUpdateStart()` mittendrin ab (gestörtes
+WLAN), kommt der `final`-Chunk nie — früher blieb die vom Callback gestoppte
+Peripherie (z. B. Kamera) bis zum Power-Cycle tot. Jetzt erkennt die
+Service-Task den Stillstand und startet nach einem Timeout sauber neu (intakte
+alte Firmware + Peripherie wiederhergestellt).
+
+```cpp
+wifiManager.setOtaStallTimeout(8000);   // ms, Default 8000
+```
+
+### „ESP neu starten"
+Die `/reset`-Seite hat jetzt oben einen grünen Button **„ESP neu starten"** —
+reiner Neustart **ohne** Datenverlust (nützlich z. B. um nach einem
+abgebrochenen OTA die Peripherie zurückzuholen).
+
+---
+
 ## 📋 API-Referenz
 
 ### Basis-Funktionen
@@ -263,6 +313,22 @@ std::vector<String> getCustomDataKeys();  // Alle gespeicherten Custom-Keys aufl
 Siehe `/examples` Ordner für vollständige Beispiele:
 - `Basic` - Grundlegende Nutzung
 - `Test` - Custom Pages, Custom Data und Debug-Ausgaben (Demo mit simulierten Werten)
+
+## 📝 Changelog
+
+### 3.0.0
+- **FreeRTOS-Service-Task** (`wfwm_svc`, Default AN): Wartung läuft in eigener Task; öffentliche `loop()` wird No-Op (rückwärtskompatibel). `setServiceTask(false)` für das bisherige Verhalten.
+- **Task-Watchdog** (Default AN, überwacht nur die Service-Task) + Reset-Ursache-Log beim Boot; Consumer-API `enableWatchdog()`, `watchdogAdd/Feed/RemoveCurrentTask()`.
+- **OTA-Selbstheilung:** abgebrochene Uploads werden per Stall-Timeout erkannt → Abbruch + Neustart. `setOtaStallTimeout(ms)`.
+- **`/reset`:** neuer Button **„ESP neu starten"** (Neustart ohne Datenverlust).
+- **Fix:** Checkboxen/Radios stehen jetzt links **neben** dem Text (CSS).
+- MAJOR-Bump: `loop()` wird optional, Default-AN-Hintergrund-Task + Panic-Watchdog ändern das Laufzeitverhalten spürbar (quellcode-kompatibel).
+
+### 2.2.0
+- `setOnUpdateStart()` — Pre-Flash-Callback (Peripherie vor OTA stoppen).
+
+### 2.1.0
+- Optionale WLAN-Status-LED (WS2812) via `enableStatusLed()`.
 
 ## 📄 Lizenz
 

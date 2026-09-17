@@ -6,6 +6,7 @@
 #include <ArduinoOTA.h>
 #include <Update.h>
 #include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #include <freertos/semphr.h>
 #include <vector>
 #include <functional>
@@ -68,6 +69,27 @@ public:
     void setStatusLedRssiThreshold(int dbm);   // Grenze gut/schwach, Default -70
     void setStatusLedSelfTest(bool enabled);   // Boot-Selbsttest rot/grün/blau
 
+    // FreeRTOS-Service-Task (Default AN): Die Lib erledigt ihre Wartung
+    // (Reset-Button, OTA-Handle, Status-LED, WLAN-Scan/-Reconnect, OTA-Stall-
+    // Check) in einer eigenen Task "wfwm_svc" statt im Consumer-loop(). Die
+    // öffentliche loop() wird dann zum No-Op — bestehende Sketches, die loop()
+    // aufrufen, laufen unverändert weiter. Vor begin() aufrufen.
+    //   false = exakt bisheriges Verhalten (Consumer ruft loop() selbst).
+    void setServiceTask(bool enabled);
+
+    // Task-Watchdog (Default AN). Vor begin() aufrufen. Überwacht NUR die
+    // Service-Task (und vom Consumer bewusst eingehängte Tasks), NICHT den
+    // Consumer-loop(). timeoutS/panic wie IDF esp_task_wdt_init.
+    void enableWatchdog(bool on, uint32_t timeoutS = 30, bool panic = true);
+    void watchdogAddCurrentTask();      // esp_task_wdt_add(NULL)
+    void watchdogFeedCurrentTask();     // esp_task_wdt_reset()
+    void watchdogRemoveCurrentTask();   // esp_task_wdt_delete(NULL)
+
+    // Stall-Timeout für abgebrochene OTA-Uploads (Default 8000 ms). Kommt nach
+    // onUpdateStart kein Chunk mehr, wird nach dieser Zeit abgebrochen + neu
+    // gestartet (siehe Service-Task).
+    void setOtaStallTimeout(uint32_t ms);
+
     void reset();
 
 private:
@@ -81,6 +103,27 @@ private:
     String defaultHostname = "";  // Standard-Hostname aus Code
     String firmwareVersion = "";  // App-Version (via setFirmwareVersion)
     std::function<void()> onUpdateStart = nullptr;
+
+    // OTA-Stall-Selbstheilung (Teil 2): verfolgt den /update- bzw. ArduinoOTA-
+    // Fortschritt; die Service-Task bricht einen mittendrin abgerissenen Upload
+    // nach otaStallTimeoutMs ab und startet neu (stellt alte FW + Peripherie her).
+    volatile bool          otaInProgress     = false;
+    volatile unsigned long otaLastChunkMs    = 0;
+    unsigned long          otaStallTimeoutMs = 8000;
+
+    // FreeRTOS-Service-Task + Task-Watchdog (Teil 3)
+    bool          serviceTaskEnabled = true;    // per setServiceTask() vor begin()
+    volatile bool serviceTaskRunning = false;   // true -> öffentliche loop() = No-Op
+    TaskHandle_t  serviceTaskHandle  = nullptr;
+    bool          wdtEnabled  = true;           // per enableWatchdog() vor begin()
+    uint32_t      wdtTimeoutS = 30;
+    bool          wdtPanic    = true;
+    void serviceIteration();                    // ein Wartungsdurchlauf (Task ODER loop())
+    void serviceTaskLoop();                     // Endlosschleife der Service-Task
+    static void serviceTaskTramp(void* arg);    // FreeRTOS-Einsprung
+    void initWatchdog();
+    void logResetReason();
+
     String ip, gateway, subnet, dns;
     bool useStaticIP = false;
     bool shouldReboot = false;

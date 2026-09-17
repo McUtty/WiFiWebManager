@@ -1,5 +1,7 @@
 #include "WiFiWebManager.h"
 #include "WiFiWebManagerFavicon.h"
+#include "esp_task_wdt.h"
+#include "esp_system.h"
 
 // Namespace und Meta-Key für Custom Data (zentral definiert, damit
 // Speichern/Laden und clearAllConfig garantiert denselben Namespace nutzen)
@@ -15,6 +17,7 @@ WiFiWebManager::WiFiWebManager() {
 
 void WiFiWebManager::begin() {
     debugPrintln("\n=== Starte WiFiWebManager ===");
+    logResetReason();
     loadConfig();
 
     // Prüfe Boot-Attempts und entscheide Verbindungsstrategie
@@ -48,20 +51,53 @@ void WiFiWebManager::begin() {
     
     handleNTP();
     setupWebServer();
-    ArduinoOTA.onStart([this]() { if (onUpdateStart) onUpdateStart(); });
+    ArduinoOTA.onStart([this]() { otaInProgress = true; otaLastChunkMs = millis(); if (onUpdateStart) onUpdateStart(); });
+    ArduinoOTA.onProgress([this](unsigned int, unsigned int) { otaLastChunkMs = millis(); });
+    ArduinoOTA.onEnd([this]() { otaInProgress = false; });
+    ArduinoOTA.onError([this](ota_error_t) { otaInProgress = false; ESP.restart(); });
     ArduinoOTA.begin();
 
     ledStarted = true;
     statusLedBegin();   // no-op, solange die LED nicht aktiviert wurde
+
+    // Task-Watchdog initialisieren, dann die Service-Task starten (Default AN).
+    initWatchdog();
+    if (serviceTaskEnabled) {
+        serviceTaskRunning = true;   // ab jetzt ist die öffentliche loop() ein No-Op
+        xTaskCreatePinnedToCore(serviceTaskTramp, "wfwm_svc", 8192, this, 1, &serviceTaskHandle, 0);
+        debugPrintln("Service-Task 'wfwm_svc' gestartet (Core 0).");
+    }
 }
 
 void WiFiWebManager::loop() {
+    // Läuft die Service-Task, übernimmt sie die Wartung -> loop() ist No-Op.
+    // So funktionieren bestehende Sketches (die loop() aufrufen) unverändert.
+    if (serviceTaskRunning) return;
+    serviceIteration();
+}
+
+// Ein Wartungsdurchlauf. Wird ENTWEDER von der Service-Task (Default) ODER,
+// wenn diese per setServiceTask(false) deaktiviert wurde, von der öffentlichen
+// loop() aufgerufen.
+void WiFiWebManager::serviceIteration() {
     if (shouldReboot) {
         debugPrintln("Reboot...");
         delay(500);
         ESP.restart();
     }
-    
+
+    // OTA-Stall-Selbstheilung: Reißt der Upload nach onUpdateStart mittendrin ab,
+    // kommt 'final' nie -> nach otaStallTimeoutMs abbrechen und neu starten. Der
+    // Reboot stellt die intakte alte Firmware UND die vom Callback gestoppte
+    // Peripherie sauber wieder her.
+    if (otaInProgress && millis() - otaLastChunkMs > otaStallTimeoutMs) {
+        debugPrintln("OTA-Upload abgebrochen (Stall-Timeout) - Update.abort() + Neustart.");
+        otaInProgress = false;
+        Update.abort();
+        delay(200);
+        ESP.restart();
+    }
+
     handleResetButton();
     ArduinoOTA.handle();
     statusLedUpdate();   // no-op, solange die LED nicht aktiviert wurde
@@ -71,6 +107,7 @@ void WiFiWebManager::loop() {
     // darf hier kurz blockieren, aber NICHT in der AsyncTCP-Task des Servers.
     bool apish = (WiFi.getMode() != WIFI_STA);
     if (scanRequested || (apish && millis() - lastScanMs > 20000)) {
+        watchdogFeedCurrentTask();   // Scan kann blockieren -> WDT vorher füttern
         updateScanCache();
     }
 
@@ -81,6 +118,7 @@ void WiFiWebManager::loop() {
 
         if (WiFi.getMode() == WIFI_STA && WiFi.status() != WL_CONNECTED) {
             debugPrintln("WLAN-Verbindung verloren, versuche Reconnect...");
+            watchdogFeedCurrentTask();   // Reconnect kann Sekunden dauern
             // Nur versuchen wenn WLAN-Daten vorhanden sind
             if (ssid.length() > 0 && connectToStoredWiFi()) {
                 debugPrintln("Reconnect erfolgreich!");
@@ -93,6 +131,7 @@ void WiFiWebManager::loop() {
             // Fehlschlag wird der AP wiederhergestellt.
             if (storedSsidInRange) {
                 debugPrintln("Gespeichertes WLAN in Reichweite - versuche Wechsel zu STA...");
+                watchdogFeedCurrentTask();
                 if (connectToStoredWiFi()) {
                     debugPrintln("Wechsel zu STA-Modus erfolgreich!");
                     resetBootAttempts();
@@ -103,6 +142,58 @@ void WiFiWebManager::loop() {
             }
         }
     }
+}
+
+// Endlosschleife der Service-Task: Wartung + Watchdog füttern + kurzer Yield.
+void WiFiWebManager::serviceTaskLoop() {
+    if (wdtEnabled) watchdogAddCurrentTask();   // Service-Task in den WDT eintragen
+    for (;;) {
+        serviceIteration();
+        watchdogFeedCurrentTask();
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
+void WiFiWebManager::serviceTaskTramp(void* arg) {
+    static_cast<WiFiWebManager*>(arg)->serviceTaskLoop();
+}
+
+// --- Watchdog / Service-Task-API -------------------------------------------
+void WiFiWebManager::initWatchdog() {
+    if (!wdtEnabled) return;
+    // IDF 4.4: esp_task_wdt_init(uint32_t timeout_s, bool panic). Re-Init bzw.
+    // "bereits initialisiert" tolerant behandeln (der Core kann den TWDT schon
+    // gestartet haben) -> Rückgabewert bewusst ignoriert.
+    esp_task_wdt_init(wdtTimeoutS, wdtPanic);
+}
+
+void WiFiWebManager::enableWatchdog(bool on, uint32_t timeoutS, bool panic) {
+    wdtEnabled  = on;
+    wdtTimeoutS = timeoutS;
+    wdtPanic    = panic;
+}
+
+void WiFiWebManager::watchdogAddCurrentTask()    { esp_task_wdt_add(NULL); }
+void WiFiWebManager::watchdogFeedCurrentTask()   { esp_task_wdt_reset(); }
+void WiFiWebManager::watchdogRemoveCurrentTask() { esp_task_wdt_delete(NULL); }
+
+void WiFiWebManager::setServiceTask(bool enabled)    { serviceTaskEnabled = enabled; }
+void WiFiWebManager::setOtaStallTimeout(uint32_t ms) { otaStallTimeoutMs = ms; }
+
+void WiFiWebManager::logResetReason() {
+    esp_reset_reason_t r = esp_reset_reason();
+    const char* s;
+    switch (r) {
+        case ESP_RST_POWERON:  s = "Power-On"; break;
+        case ESP_RST_SW:       s = "Software-Reset"; break;
+        case ESP_RST_PANIC:    s = "Panic/Exception"; break;
+        case ESP_RST_BROWNOUT: s = "Brownout"; break;
+        case ESP_RST_TASK_WDT:
+        case ESP_RST_WDT:
+        case ESP_RST_INT_WDT:  s = "WATCHDOG-RESET"; break;
+        default:               s = "sonstige"; break;
+    }
+    debugPrintf("Reset-Ursache: %s (%d)\n", s, (int)r);
 }
 
 // Führt einen (synchronen) WLAN-Scan im loop()-Task aus und baut daraus die
@@ -316,6 +407,7 @@ bool WiFiWebManager::connectToStoredWiFi() {
     // 5 Sekunden Timeout
     for (int i = 0; i < 10 && WiFi.status() != WL_CONNECTED; i++) {
         delay(500);
+        watchdogFeedCurrentTask();   // langer Connect soll den WDT nicht auslösen
         debugPrint(".");
     }
     debugPrintln("");
@@ -735,7 +827,9 @@ String WiFiWebManager::htmlWrap(const String& menutitle, const String& currentPa
       h1{font-size:1.6em;margin-bottom:1em;}h2{font-size:1.3em;margin:1.5em 0 1em;color:#2584fc;}
       label{display:block;margin:1em 0 0.5em;font-weight:600;}
       input,select{width:100%;font-size:1.1em;padding:0.8em;margin-bottom:1em;border-radius:8px;
-      border:1px solid #bbb;box-sizing:border-box;}button,input[type=submit]{width:100%;padding:1em;
+      border:1px solid #bbb;box-sizing:border-box;}
+      input[type=checkbox],input[type=radio]{width:auto;padding:0;margin:0 .45em 0 0;display:inline-block;vertical-align:middle;}
+      button,input[type=submit]{width:100%;padding:1em;
       font-size:1.1em;border:none;border-radius:8px;background:#2584fc;color:#fff;margin-top:0.7em;font-weight:700;
       cursor:pointer;box-shadow:0 4px 8px #2584fc22;transition:background 0.2s;}
       button:hover,input[type=submit]:hover{background:#1064b0;}
@@ -957,6 +1051,15 @@ void WiFiWebManager::setupWebServer() {
     // Reset-Seite
     server.on("/reset", HTTP_GET, [this](AsyncWebServerRequest *request){
         String html = "<h1>Reset-Optionen</h1>";
+
+        // Reiner Neustart (löscht NICHTS) — ganz oben, klar abgesetzt von den
+        // löschenden Aktionen.
+        html += "<h2>Neustart</h2>";
+        html += "<form action='/restart' method='POST'>";
+        html += "<input type='submit' value='ESP neu starten' style='background:#2e7d32;'>";
+        html += "</form>";
+        html += "<p><small>Startet nur neu. Konfiguration bleibt erhalten.</small></p>";
+
         html += "<div class='status-box'>";
         html += "<p><strong>Hardware Reset-Button (GPIO 0):</strong></p>";
         html += "<p>• 3-10 Sekunden: Nur WLAN-Daten löschen</p>";
@@ -973,6 +1076,13 @@ void WiFiWebManager::setupWebServer() {
         html += "</form>";
         
         request->send(200, "text/html; charset=utf-8", htmlWrap("Reset", "/reset", html));
+    });
+
+    // Reiner Neustart (KEIN Löschen von Config/NVS)
+    server.on("/restart", HTTP_POST, [this](AsyncWebServerRequest *request){
+        request->send(200, "text/html; charset=utf-8",
+            htmlWrap("Neustart", "/", "<p>ESP startet neu…</p>"));
+        shouldReboot = true;   // Reboot geordnet über Service-Task/loop() (~500 ms)
     });
 
     // WLAN-Reset
@@ -1058,17 +1168,21 @@ void WiFiWebManager::setupWebServer() {
         [this](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
             if (!index) {
                 debugPrintf("Update gestartet: %s\n", filename.c_str());
+                otaInProgress = true;
+                otaLastChunkMs = millis();
                 if (onUpdateStart) onUpdateStart();
                 if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
                     if (debugMode) Update.printError(Serial);
                 }
             }
+            otaLastChunkMs = millis();   // jeder Chunk hält den Stall-Timer frisch
             if (!Update.hasError()) {
                 if (Update.write(data, len) != len) {
                     if (debugMode) Update.printError(Serial);
                 }
             }
             if (final) {
+                otaInProgress = false;
                 if (Update.end(true)) {
                     debugPrintf("Update erfolgreich: %uB\n", index + len);
                 } else {

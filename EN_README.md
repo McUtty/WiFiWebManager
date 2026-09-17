@@ -210,6 +210,54 @@ wifiManager.enableStatusLed(38);    // back on, now on GPIO 38
 
 ---
 
+## 🧵 FreeRTOS Service Task + Watchdog (since v3.0.0)
+
+Since v3.0.0 the library runs its housekeeping (reset button, OTA handle, status
+LED, WiFi scan/reconnect, OTA-stall check) in its **own FreeRTOS task `wfwm_svc`**
+(core 0) by default. WiFi scan/reconnect no longer block your `loop()`.
+
+**Backward compatible:** the public `loop()` remains and becomes a **no-op** while
+the service task runs — existing sketches that call `loop()` keep working unchanged.
+
+```cpp
+// Optional, BEFORE begin():
+wifiManager.setServiceTask(false);   // exact previous behavior (you call loop() yourself)
+```
+
+### Task Watchdog (on by default)
+The library ships a task watchdog that watches **only the service task** — a long
+consumer `loop()` will **not** cause a reset. The reset reason is logged at boot
+(clearly flagged as `WATCHDOG-RESET`).
+
+```cpp
+// Optional, BEFORE begin():
+wifiManager.enableWatchdog(true, 30, true);  // on, 30 s timeout, panic=true (default)
+wifiManager.enableWatchdog(false);           // off
+
+// Hook your own consumer tasks in (instead of using esp_task_wdt directly):
+wifiManager.watchdogAddCurrentTask();
+wifiManager.watchdogFeedCurrentTask();
+wifiManager.watchdogRemoveCurrentTask();
+```
+
+### OTA self-healing on aborted uploads
+If a `/update` upload is cut off mid-way after `setOnUpdateStart()` (flaky WiFi),
+the `final` chunk never arrives — previously the peripheral stopped by the
+callback (e.g. a camera) stayed dead until a power cycle. Now the service task
+detects the stall and reboots cleanly after a timeout (intact old firmware +
+peripherals restored).
+
+```cpp
+wifiManager.setOtaStallTimeout(8000);   // ms, default 8000
+```
+
+### "Restart ESP"
+The `/reset` page now has a green **"ESP neu starten" (Restart ESP)** button at the
+top — a plain reboot **without** data loss (e.g. to recover peripherals after an
+aborted OTA).
+
+---
+
 ## 📋 API Reference
 
 ### Basic Functions
@@ -339,6 +387,22 @@ See the `/examples` folder for complete demos:
 * **Test** – custom pages, custom data and debug output (demo with simulated values)
 
 ---
+
+## 📝 Changelog
+
+### 3.0.0
+- **FreeRTOS service task** (`wfwm_svc`, on by default): housekeeping runs in its own task; public `loop()` becomes a no-op (backward compatible). Use `setServiceTask(false)` for the previous behavior.
+- **Task watchdog** (on by default, watches only the service task) + reset-reason log at boot; consumer API `enableWatchdog()`, `watchdogAdd/Feed/RemoveCurrentTask()`.
+- **OTA self-healing:** aborted uploads are detected via a stall timeout → abort + reboot. `setOtaStallTimeout(ms)`.
+- **`/reset`:** new **"Restart ESP"** button (reboot without data loss).
+- **Fix:** checkboxes/radios now sit to the **left** of the text (CSS).
+- MAJOR bump: `loop()` becomes optional; the default-on background task + panic watchdog change runtime behavior noticeably (source-compatible).
+
+### 2.2.0
+- `setOnUpdateStart()` — pre-flash callback (stop peripherals before OTA).
+
+### 2.1.0
+- Optional WiFi status LED (WS2812) via `enableStatusLed()`.
 
 ## 📄 License
 
