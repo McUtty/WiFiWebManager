@@ -313,6 +313,7 @@ std::vector<String> getCustomDataKeys();  // Alle gespeicherten Custom-Keys aufl
 Siehe `/examples` Ordner für vollständige Beispiele:
 - `Basic` - Grundlegende Nutzung
 - `Test` - Custom Pages, Custom Data und Debug-Ausgaben (Demo mit simulierten Werten)
+- `ServiceTaskWatchdog` - v3.0.0-Features: Service-Task, Watchdog, OTA-Selbstheilung, eigene überwachte Task
 
 ## 📝 Changelog
 

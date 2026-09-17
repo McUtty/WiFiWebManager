@@ -385,6 +385,7 @@ See the `/examples` folder for complete demos:
 
 * **Basic** – minimal setup
 * **Test** – custom pages, custom data and debug output (demo with simulated values)
+* **ServiceTaskWatchdog** – v3.0.0 features: service task, watchdog, OTA self-healing, own watched task
 
 ---
 
