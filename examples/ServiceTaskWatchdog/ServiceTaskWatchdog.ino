@@ -1,19 +1,21 @@
 /*
-  WiFiWebManager - ServiceTaskWatchdog Example (v3.0.0)
+  WiFiWebManager - ServiceTaskWatchdog Example (v3.1.0)
 
-  Zeigt die Neuerungen ab v3.0.0:
+  Zeigt die Neuerungen ab v3.0.0 sowie das OTA-quiesce-Muster aus v3.1.0:
    - FreeRTOS-Service-Task (Default AN): Die Lib erledigt ihre Wartung selbst;
      wifiManager.loop() ist dann ein No-Op. Opt-out per setServiceTask(false).
    - Task-Watchdog (Default AN): ueberwacht die Service-Task; hier haengen wir
      zusaetzlich eine eigene Consumer-Task ein.
-   - OTA-Selbstheilung: onUpdateStart() stoppt stoerende Peripherie vor dem Flash,
-     setOtaStallTimeout() begrenzt abgebrochene Uploads.
+   - OTA unter Last (v3.1.0): onUpdateStart() stoppt Peripherie/haelt eigene Tasks
+     an, onUpdateEnd(success) gibt sie wieder frei. Die Lib-eigene Service-Task
+     pausiert waehrend eines OTA automatisch.
+   - OTA-Selbstheilung optional (setOtaStallTimeout, Default AUS).
    - "ESP neu starten"-Button auf der /reset-Seite (Neustart ohne Datenverlust).
 
   Hardware: beliebiges ESP32-Board.
   Nach dem Upload wie ueblich: AP "ESP32_SETUP" -> http://192.168.4.1 -> WLAN einrichten.
 
-  Version: 3.0.0
+  Version: 3.1.0
   Autor: McUtty
 */
 
@@ -21,20 +23,34 @@
 
 WiFiWebManager wifiManager;
 
+// quiesce-Flag: waehrend eines OTA pausiert die eigene Consumer-Task, damit sie
+// nicht mit dem OTA-Empfang konkurriert.
+volatile bool g_workerPaused = false;
+
 // Platzhalter fuer stoerende Peripherie (z. B. eine Kamera mit eigenem
-// Treiber-Task/DMA), die VOR dem Flash gestoppt werden muss, sonst kann ein
-// OTA-Update abstuerzen.
+// Treiber-Task/DMA), die VOR dem Flash gestoppt werden muss.
 void stopPeripherals() {
-    Serial.println("[OTA] Stoppe Peripherie vor dem Flash (z. B. camera.deinit())...");
+    Serial.println("[OTA] onUpdateStart: Peripherie stoppen + eigene Tasks anhalten...");
+    g_workerPaused = true;
     // camera.deinit(); digitalWrite(MOTOR_PIN, LOW); ...
 }
 
+// Gegenstueck: nach dem OTA (Erfolg ODER Abbruch) wieder freigeben.
+void resumePeripherals(bool success) {
+    Serial.printf("[OTA] onUpdateEnd(success=%d): eigene Tasks wieder freigeben.\n", (int)success);
+    g_workerPaused = false;
+    // camera.init(); ...
+}
+
 // Beispiel-Consumer-Task, die eigene Arbeit macht und sich in den Lib-Watchdog
-// einhaengt, damit sie mitueberwacht wird.
+// einhaengt, damit sie mitueberwacht wird. Waehrend eines OTA haelt sie sich
+// (ueber g_workerPaused) zurueck.
 void workerTask(void* arg) {
     wifiManager.watchdogAddCurrentTask();       // von der Lib mitueberwachen lassen
     for (;;) {
-        // ... eigene periodische Arbeit ...
+        if (!g_workerPaused) {
+            // ... eigene periodische Arbeit ...
+        }
         wifiManager.watchdogFeedCurrentTask();  // regelmaessig fuettern
         vTaskDelay(pdMS_TO_TICKS(500));
     }
@@ -42,14 +58,14 @@ void workerTask(void* arg) {
 
 void setup() {
     Serial.begin(115200);
-    Serial.println("\n=== WiFiWebManager ServiceTaskWatchdog Example (v3.0.0) ===");
+    Serial.println("\n=== WiFiWebManager ServiceTaskWatchdog Example (v3.1.0) ===");
 
     // App-Version (erscheint auf der /update-Seite)
     wifiManager.setFirmwareVersion("1.0.0");
     wifiManager.setDefaultHostname("ESP32-Advanced");
     wifiManager.setDebugMode(true);
 
-    // --- v3.0.0-Optionen (alle VOR begin()) ---
+    // --- Optionen (alle VOR begin()) ---
     // Service-Task ist Default AN. Zum alten Verhalten (du rufst loop() selbst):
     //   wifiManager.setServiceTask(false);
     wifiManager.setServiceTask(true);
@@ -57,10 +73,14 @@ void setup() {
     // Task-Watchdog: Default AN (30 s, panic=true). Hier explizit gezeigt:
     wifiManager.enableWatchdog(true, 30, true);
 
-    // OTA robust: Peripherie vor dem Flash stoppen + Stall-Timeout fuer
-    // mittendrin abgebrochene Uploads.
+    // OTA robust (quiesce-Muster): Peripherie/Tasks bei Start anhalten, bei
+    // Ende/Abbruch wieder freigeben.
     wifiManager.setOnUpdateStart(stopPeripherals);
-    wifiManager.setOtaStallTimeout(8000);   // ms (Default)
+    wifiManager.setOnUpdateEnd(resumePeripherals);
+
+    // Optionale Selbstheilung bei echt abgerissenem Upload (Default AUS = 0).
+    // Falls gewuenscht aktivieren (Empfehlung >= 20000):
+    //   wifiManager.setOtaStallTimeout(20000);
 
     // Optional: WLAN-Status-LED (On-Board-WS2812), Pin je nach Board:
     //   wifiManager.enableStatusLed(48);

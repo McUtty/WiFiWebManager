@@ -53,8 +53,8 @@ void WiFiWebManager::begin() {
     setupWebServer();
     ArduinoOTA.onStart([this]() { otaInProgress = true; otaLastChunkMs = millis(); if (onUpdateStart) onUpdateStart(); });
     ArduinoOTA.onProgress([this](unsigned int, unsigned int) { otaLastChunkMs = millis(); watchdogFeedCurrentTask(); });
-    ArduinoOTA.onEnd([this]() { otaInProgress = false; });
-    ArduinoOTA.onError([this](ota_error_t e) { otaInProgress = false; if (debugMode) Serial.printf("ArduinoOTA-Fehler: %d\n", (int)e); });
+    ArduinoOTA.onEnd([this]() { otaInProgress = false; if (onUpdateEnd) onUpdateEnd(true); });
+    ArduinoOTA.onError([this](ota_error_t e) { otaInProgress = false; if (onUpdateEnd) onUpdateEnd(false); if (debugMode) Serial.printf("ArduinoOTA-Fehler: %d\n", (int)e); });
     ArduinoOTA.begin();
     debugPrintf("ArduinoOTA bereit (Port 3232), Host: %s\n", getHostname().c_str());
 
@@ -106,6 +106,7 @@ void WiFiWebManager::serviceIteration() {
             debugPrintln("OTA gestallt (kein Fortschritt) - Update.abort() + Neustart.");
             otaInProgress = false;
             Update.abort();
+            if (onUpdateEnd) onUpdateEnd(false);
             delay(200);
             ESP.restart();
         }
@@ -162,6 +163,28 @@ void WiFiWebManager::serviceIteration() {
 void WiFiWebManager::serviceTaskLoop() {
     if (wdtEnabled) watchdogAddCurrentTask();   // Service-Task in den WDT eintragen
     for (;;) {
+        // Während eines laufenden OTA pausiert sich die Service-Task ECHT: Sie
+        // nimmt sich aus dem Watchdog (sonst Panic durch fehlendes Füttern) und
+        // schläft in groben 100-ms-Schritten, statt im 10-ms-Takt aufzuwachen. So
+        // konkurriert sie nicht mit dem AsyncTCP-Empfang/Flash. Der Stall-Timer
+        // (Selbstheilung) läuft weiter, falls aktiviert. Nach OTA-Ende trägt sie
+        // sich wieder in den Watchdog ein und nimmt die Wartung auf.
+        if (otaInProgress) {
+            if (wdtEnabled) esp_task_wdt_delete(NULL);
+            while (otaInProgress) {
+                if (otaStallTimeoutMs > 0 && millis() - otaLastChunkMs > otaStallTimeoutMs) {
+                    debugPrintln("OTA gestallt (kein Fortschritt) - Update.abort() + Neustart.");
+                    otaInProgress = false;
+                    Update.abort();
+                    if (onUpdateEnd) onUpdateEnd(false);
+                    delay(200);
+                    ESP.restart();
+                }
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+            if (wdtEnabled) watchdogAddCurrentTask();
+            continue;
+        }
         serviceIteration();
         watchdogFeedCurrentTask();
         // Kurzer Takt: ArduinoOTA.handle() muss die espota-Invitation zeitnah
@@ -654,6 +677,7 @@ void WiFiWebManager::setFirmwareVersion(const String& version) {
 }
 
 void WiFiWebManager::setOnUpdateStart(std::function<void()> cb) { onUpdateStart = cb; }
+void WiFiWebManager::setOnUpdateEnd(std::function<void(bool)> cb) { onUpdateEnd = cb; }
 
 // Erweiterte Custom Data API
 void WiFiWebManager::saveCustomData(const String& key, const String& value) {
@@ -1203,12 +1227,14 @@ void WiFiWebManager::setupWebServer() {
             }
             if (final) {
                 otaInProgress = false;
-                if (Update.end(true)) {
+                bool ok = Update.end(true);
+                if (ok) {
                     debugPrintf("Update erfolgreich: %uB\n", index + len);
                 } else {
                     if (debugMode) Update.printError(Serial);
                     Update.abort();
                 }
+                if (onUpdateEnd) onUpdateEnd(ok);   // Gegenstueck zu onUpdateStart
             }
         }
     );

@@ -49,6 +49,15 @@ public:
     // (z. B. Kamera deinit, Ausgaenge sicher). Optional.
     void setOnUpdateStart(std::function<void()> cb);
 
+    // Gegenstueck zu setOnUpdateStart: wird am ENDE eines OTA aufgerufen —
+    // success=true nach erfolgreichem Flash (kurz vor dem Neustart), success=false
+    // bei Fehler/Abbruch. Damit laesst sich generisch "quiesce during OTA" bauen:
+    // in onUpdateStart eigene Tasks anhalten, in onUpdateEnd wieder freigeben.
+    // Hinweis: Reisst ein /update-Upload wirklich ab und ist die Selbstheilung
+    // (setOtaStallTimeout) AUS, endet der OTA nicht sauber -> onUpdateEnd feuert
+    // dann nicht; fuer automatische Freigabe in diesem Fall Selbstheilung setzen.
+    void setOnUpdateEnd(std::function<void(bool success)> cb);
+
     // Debug-Modus Management
     void setDebugMode(bool enabled);
     bool getDebugMode();
@@ -105,6 +114,7 @@ private:
     String defaultHostname = "";  // Standard-Hostname aus Code
     String firmwareVersion = "";  // App-Version (via setFirmwareVersion)
     std::function<void()> onUpdateStart = nullptr;
+    std::function<void(bool)> onUpdateEnd = nullptr;
 
     // OTA-Stall-Selbstheilung (Teil 2): verfolgt den /update- bzw. ArduinoOTA-
     // Fortschritt; die Service-Task bricht einen mittendrin abgerissenen Upload

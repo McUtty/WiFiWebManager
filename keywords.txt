@@ -20,6 +20,7 @@ setDefaultHostname	KEYWORD2
 getHostname	KEYWORD2
 setFirmwareVersion	KEYWORD2
 setOnUpdateStart	KEYWORD2
+setOnUpdateEnd	KEYWORD2
 setServiceTask	KEYWORD2
 enableWatchdog	KEYWORD2
 watchdogAddCurrentTask	KEYWORD2

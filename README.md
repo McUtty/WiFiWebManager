@@ -207,15 +207,39 @@ wifiManager.watchdogRemoveCurrentTask();  // austragen
 ```
 
 ### OTA-Selbstheilung bei abgebrochenem Upload
-Reißt ein `/update`-Upload nach `setOnUpdateStart()` mittendrin ab (gestörtes
-WLAN), kommt der `final`-Chunk nie — früher blieb die vom Callback gestoppte
-Peripherie (z. B. Kamera) bis zum Power-Cycle tot. Jetzt erkennt die
-Service-Task den Stillstand und startet nach einem Timeout sauber neu (intakte
-alte Firmware + Peripherie wiederhergestellt).
+Reißt ein `/update`-Upload mittendrin ab (gestörtes WLAN), kommt der
+`final`-Chunk nie. Optional erkennt die Service-Task diesen Stillstand und
+startet nach einem Timeout sauber neu (intakte alte Firmware wiederhergestellt).
+**Default AUS** (`0`) — die Lib bricht einen laufenden OTA dann **nie** selbst
+ab. Mit `ms > 0` aktivierbar (Empfehlung ≥ 20000):
 
 ```cpp
-wifiManager.setOtaStallTimeout(8000);   // ms, Default 8000
+wifiManager.setOtaStallTimeout(20000);   // ms; 0 = AUS (Default)
 ```
+
+### OTA unter Last (Nebenläufigkeit) + quiesce-Muster
+Betreibt der Consumer viele eigene FreeRTOS-Tasks (Netz-/CPU-Last), soll der
+OTA-Empfang trotzdem zuverlässig laufen. Die Lib unterstützt das doppelt:
+
+- **Automatische Service-Task-Pause:** Sobald ein OTA startet, nimmt sich die
+  Lib-eigene Service-Task aus dem Watchdog und pausiert, bis der OTA fertig ist —
+  sie konkurriert dann nicht mit dem AsyncTCP-Empfang.
+- **quiesce-Muster für den Consumer:** `setOnUpdateStart()` (vor dem ersten
+  Flash-Write) und das Gegenstück `setOnUpdateEnd(success)` (am Ende) erlauben es,
+  eigene Tasks für die Dauer des OTA generisch anzuhalten und danach wieder
+  freizugeben:
+
+```cpp
+volatile bool pause = false;
+void myTask(void*) { for(;;){ if(!pause){ /* Arbeit */ } vTaskDelay(pdMS_TO_TICKS(10)); } }
+
+wifiManager.setOnUpdateStart([]()        { pause = true;  /* Peripherie stoppen */ });
+wifiManager.setOnUpdateEnd  ([](bool ok) { pause = false; /* Betrieb wieder freigeben */ });
+```
+
+> Hinweis: Reißt ein `/update` wirklich ab **und** ist die Selbstheilung AUS,
+> endet der OTA nicht sauber → `onUpdateEnd` feuert dann nicht. Für automatische
+> Freigabe in diesem Fall `setOtaStallTimeout(ms>0)` setzen.
 
 ### „ESP neu starten"
 Die `/reset`-Seite hat jetzt oben einen grünen Button **„ESP neu starten"** —
@@ -248,13 +272,15 @@ Einmal in `setup()` aufrufen, damit die Firmware-Version im Web-UI sichtbar ist:
 wifiManager.setFirmwareVersion("1.0.0");
 ```
 
-### OTA-Callback (Peripherie vor dem Flash stoppen)
+### OTA-Callbacks (Peripherie/Tasks um den Flash herum steuern)
 ```cpp
-void setOnUpdateStart(std::function<void()> cb);
+void setOnUpdateStart(std::function<void()> cb);            // vor dem ersten Flash-Write
+void setOnUpdateEnd(std::function<void(bool success)> cb);  // am Ende (Erfolg/Abbruch)
 ```
-Wird **direkt vor dem ersten Flash-Schreiben** aufgerufen — sowohl bei OTA über `/update` als auch über ArduinoOTA/espota. Damit kann der Consumer störende Peripherie (z. B. Kamera-Treiber/DMA) rechtzeitig stoppen, bevor der Flash beschrieben wird:
+`onUpdateStart` wird **direkt vor dem ersten Flash-Schreiben** aufgerufen (bei `/update` UND ArduinoOTA/espota) — hier störende Peripherie (z. B. Kamera-Treiber/DMA) stoppen. `onUpdateEnd(success)` ist das Gegenstück am Ende: `success=true` nach erfolgreichem Flash (kurz vor dem Neustart), `false` bei Fehler/Abbruch — hier die eigenen Tasks/Peripherie wieder freigeben (quiesce-Muster, siehe „OTA unter Last"):
 ```cpp
-wifiManager.setOnUpdateStart([]() { camera.deinit(); });
+wifiManager.setOnUpdateStart([]()        { camera.deinit(); });
+wifiManager.setOnUpdateEnd  ([](bool ok) { /* Tasks wieder freigeben */ });
 ```
 
 ### Debug-Funktionen
@@ -319,6 +345,7 @@ Siehe `/examples` Ordner für vollständige Beispiele:
 
 | Version | Datum | Beschreibung |
 |---------|-------|--------------|
+| **3.1.0** | 2026-09-21 | **OTA unter Last / Nebenläufigkeit:** neue API `setOnUpdateEnd(bool success)` als Gegenstück zu `setOnUpdateStart()` (quiesce-Muster: eigene Tasks bei OTA-Start anhalten, bei Ende/Abbruch freigeben).<br>Die Lib-eigene Service-Task **pausiert jetzt echt** während eines OTA (nimmt sich aus dem Watchdog + schläft), statt im 10-ms-Takt zu konkurrieren.<br>Auf HW verifiziert: 2-MB-`/update` läuft unter Multi-Task-Last (CPU beide Cores + lwIP-Sättigung) komplett durch. |
 | **3.0.2** | 2026-09-21 | OTA-Empfang weiter gehärtet: kein Geräte-Reboot mehr bei ArduinoOTA-Fehler (espota rebootete zuvor u. U. schon im Handshake → „No response"); `ArduinoOTA.handle()` wird alle **10 ms** gepollt.<br>**OTA-Selbstheilung standardmäßig AUS** (`setOtaStallTimeout(0)`): ein laufender `/update` wird **nie** mehr selbst abgebrochen; Recovery nur auf Wunsch (`setOtaStallTimeout(ms>0)`, empfohlen ≥ 20000).<br>`/update`-Fortschrittsdiagnose (alle 64 KB) bei aktivem Debug. |
 | **3.0.1** | 2026-09-21 | Fix OTA-Empfang (Regression aus 3.0.0): Service-Task läuft auf **Core 1** (weg von WiFi/lwIP/AsyncTCP auf Core 0); Service-Task hält sich während eines OTA komplett zurück (kein Scan/Reconnect/LED/Reset-Button); Watchdog-Fütterung während espota via `onProgress`; Stall-Timeout-Default **8 s → 20 s**. |
 | **3.0.0** | 2026-09-17 | **FreeRTOS-Service-Task** (`wfwm_svc`, Default AN; öffentliche `loop()` wird No-Op, `setServiceTask(false)` für altes Verhalten); **Task-Watchdog** (Default AN) + Reset-Ursache-Log beim Boot; OTA-Selbstheilung per Stall-Timeout (`setOtaStallTimeout`); „ESP neu starten"-Button auf `/reset`; Fix: Checkboxen/Radios links neben dem Text. **MAJOR** (Laufzeitverhalten ändert sich, quellcode-kompatibel). |
