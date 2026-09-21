@@ -52,7 +52,7 @@ void WiFiWebManager::begin() {
     handleNTP();
     setupWebServer();
     ArduinoOTA.onStart([this]() { otaInProgress = true; otaLastChunkMs = millis(); if (onUpdateStart) onUpdateStart(); });
-    ArduinoOTA.onProgress([this](unsigned int, unsigned int) { otaLastChunkMs = millis(); });
+    ArduinoOTA.onProgress([this](unsigned int, unsigned int) { otaLastChunkMs = millis(); watchdogFeedCurrentTask(); });
     ArduinoOTA.onEnd([this]() { otaInProgress = false; });
     ArduinoOTA.onError([this](ota_error_t) { otaInProgress = false; ESP.restart(); });
     ArduinoOTA.begin();
@@ -64,8 +64,12 @@ void WiFiWebManager::begin() {
     initWatchdog();
     if (serviceTaskEnabled) {
         serviceTaskRunning = true;   // ab jetzt ist die öffentliche loop() ein No-Op
-        xTaskCreatePinnedToCore(serviceTaskTramp, "wfwm_svc", 8192, this, 1, &serviceTaskHandle, 0);
-        debugPrintln("Service-Task 'wfwm_svc' gestartet (Core 0).");
+        // Core 1 (APP_CPU) — bewusst NICHT Core 0: dort laufen WiFi/lwIP/AsyncTCP;
+        // eine konkurrierende Wartungs-Task auf Core 0 würgte in 3.0.0 den
+        // OTA-Empfang (/update und espota) ab. Core 1 entspricht der 2.2.0-
+        // Topologie (Wartung lief im Arduino-loopTask auf Core 1).
+        xTaskCreatePinnedToCore(serviceTaskTramp, "wfwm_svc", 8192, this, 1, &serviceTaskHandle, 1);
+        debugPrintln("Service-Task 'wfwm_svc' gestartet (Core 1).");
     }
 }
 
@@ -86,16 +90,23 @@ void WiFiWebManager::serviceIteration() {
         ESP.restart();
     }
 
-    // OTA-Stall-Selbstheilung: Reißt der Upload nach onUpdateStart mittendrin ab,
-    // kommt 'final' nie -> nach otaStallTimeoutMs abbrechen und neu starten. Der
-    // Reboot stellt die intakte alte Firmware UND die vom Callback gestoppte
-    // Peripherie sauber wieder her.
-    if (otaInProgress && millis() - otaLastChunkMs > otaStallTimeoutMs) {
-        debugPrintln("OTA-Upload abgebrochen (Stall-Timeout) - Update.abort() + Neustart.");
-        otaInProgress = false;
-        Update.abort();
-        delay(200);
-        ESP.restart();
+    // Während eines laufenden OTA-Uploads hält sich die Service-Task KOMPLETT
+    // zurück: kein WLAN-Scan/-Reconnect, keine Status-LED (neopixelWrite sperrt
+    // kurz Interrupts), kein Reset-Button — das würde den AsyncTCP-Task bzw. das
+    // Flash-/WiFi-Timing stören und den Empfang abwürgen. Nur den Watchdog
+    // füttern. Der Stall-Timer läuft weiter (jeder Chunk hält ihn frisch, siehe
+    // /update-Upload-Handler bzw. ArduinoOTA.onProgress); erst ein ECHTER
+    // Stillstand (abgerissener Upload) löst die Selbstheilung aus.
+    if (otaInProgress) {
+        watchdogFeedCurrentTask();
+        if (millis() - otaLastChunkMs > otaStallTimeoutMs) {
+            debugPrintln("OTA gestallt (kein Fortschritt) - Update.abort() + Neustart.");
+            otaInProgress = false;
+            Update.abort();
+            delay(200);
+            ESP.restart();
+        }
+        return;   // im OTA-Betrieb sonst nichts tun
     }
 
     handleResetButton();

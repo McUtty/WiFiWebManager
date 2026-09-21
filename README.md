@@ -178,7 +178,7 @@ wifiManager.enableStatusLed(38);    // wieder an, jetzt an GPIO 38
 
 Ab v3.0.0 erledigt die Lib ihre Wartung (Reset-Button, OTA-Handle, Status-LED,
 WLAN-Scan/-Reconnect, OTA-Stall-Check) **standardmäßig in einer eigenen
-FreeRTOS-Task `wfwm_svc`** (Core 0). Damit blockieren WLAN-Scan/-Reconnect nicht
+FreeRTOS-Task `wfwm_svc`** (Core 1, weg von WiFi/lwIP). Damit blockieren WLAN-Scan/-Reconnect nicht
 mehr deinen `loop()`.
 
 **Rückwärtskompatibel:** Die öffentliche `loop()` bleibt bestehen und wird zum
@@ -316,6 +316,13 @@ Siehe `/examples` Ordner für vollständige Beispiele:
 - `ServiceTaskWatchdog` - v3.0.0-Features: Service-Task, Watchdog, OTA-Selbstheilung, eigene überwachte Task
 
 ## 📝 Changelog
+
+### 3.0.1
+- **Fix OTA-Empfang** (Regression aus 3.0.0): `/update` **und** espota (Port 3232) funktionieren wieder.
+  - Service-Task läuft jetzt auf **Core 1** (weg von WiFi/lwIP/AsyncTCP auf Core 0) — beseitigt die Kontention, die den OTA-Empfang abwürgte.
+  - Während eines OTA hält sich die Service-Task komplett zurück (kein Scan/Reconnect/LED/Reset-Button), damit AsyncTCP/Flash nicht gestört werden; nur ein **echter** Stillstand löst die Selbstheilung aus.
+  - Watchdog wird während des (blockierenden) espota-Transfers über `onProgress` gefüttert.
+  - Stall-Timeout-Default **8 s → 20 s** (bricht die legitime Deinit-/Erase-Phase nicht mehr fälschlich ab).
 
 ### 3.0.0
 - **FreeRTOS-Service-Task** (`wfwm_svc`, Default AN): Wartung läuft in eigener Task; öffentliche `loop()` wird No-Op (rückwärtskompatibel). `setServiceTask(false)` für das bisherige Verhalten.

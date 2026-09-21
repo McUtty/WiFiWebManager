@@ -214,7 +214,7 @@ wifiManager.enableStatusLed(38);    // back on, now on GPIO 38
 
 Since v3.0.0 the library runs its housekeeping (reset button, OTA handle, status
 LED, WiFi scan/reconnect, OTA-stall check) in its **own FreeRTOS task `wfwm_svc`**
-(core 0) by default. WiFi scan/reconnect no longer block your `loop()`.
+(core 1, away from WiFi/lwIP) by default. WiFi scan/reconnect no longer block your `loop()`.
 
 **Backward compatible:** the public `loop()` remains and becomes a **no-op** while
 the service task runs — existing sketches that call `loop()` keep working unchanged.
@@ -390,6 +390,13 @@ See the `/examples` folder for complete demos:
 ---
 
 ## 📝 Changelog
+
+### 3.0.1
+- **OTA receive fix** (regression from 3.0.0): `/update` **and** espota (port 3232) work again.
+  - Service task now runs on **core 1** (away from WiFi/lwIP/AsyncTCP on core 0) — removes the contention that stalled OTA reception.
+  - During an OTA the service task fully backs off (no scan/reconnect/LED/reset button) so AsyncTCP/flash aren't disturbed; only a **genuine** stall triggers self-healing.
+  - Watchdog is fed during the (blocking) espota transfer via `onProgress`.
+  - Stall-timeout default **8 s → 20 s** (no longer aborts the legitimate deinit/erase phase).
 
 ### 3.0.0
 - **FreeRTOS service task** (`wfwm_svc`, on by default): housekeeping runs in its own task; public `loop()` becomes a no-op (backward compatible). Use `setServiceTask(false)` for the previous behavior.

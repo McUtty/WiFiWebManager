@@ -85,9 +85,11 @@ public:
     void watchdogFeedCurrentTask();     // esp_task_wdt_reset()
     void watchdogRemoveCurrentTask();   // esp_task_wdt_delete(NULL)
 
-    // Stall-Timeout für abgebrochene OTA-Uploads (Default 8000 ms). Kommt nach
-    // onUpdateStart kein Chunk mehr, wird nach dieser Zeit abgebrochen + neu
-    // gestartet (siehe Service-Task).
+    // Stall-Timeout für ECHT abgebrochene OTA-Uploads (Default 20000 ms). Kommt
+    // nach dem letzten Fortschritt für diese Zeit KEIN Chunk mehr, wird
+    // abgebrochen + neu gestartet (Selbstheilung, siehe Service-Task). Großzügig
+    // gewählt, damit die legitime Anfangsphase (Peripherie-Deinit + Flash-Erase)
+    // den laufenden Upload nicht fälschlich abbricht.
     void setOtaStallTimeout(uint32_t ms);
 
     void reset();
@@ -109,7 +111,7 @@ private:
     // nach otaStallTimeoutMs ab und startet neu (stellt alte FW + Peripherie her).
     volatile bool          otaInProgress     = false;
     volatile unsigned long otaLastChunkMs    = 0;
-    unsigned long          otaStallTimeoutMs = 8000;
+    unsigned long          otaStallTimeoutMs = 20000;   // nur ECHTER Stillstand; großzügig (Deinit/Erase-Phase)
 
     // FreeRTOS-Service-Task + Task-Watchdog (Teil 3)
     bool          serviceTaskEnabled = true;    // per setServiceTask() vor begin()
