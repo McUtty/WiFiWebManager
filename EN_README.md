@@ -391,32 +391,13 @@ See the `/examples` folder for complete demos:
 
 ## 📝 Changelog
 
-### 3.0.2
-- **OTA reception further hardened** (follow-up to 3.0.1):
-  - **espota (3232):** no more device reboot on an ArduinoOTA error (previously it could reboot during the handshake → "No response"). The service loop now polls `ArduinoOTA.handle()` every **10 ms** (was 50 ms). Readiness is logged at boot.
-  - **OTA self-healing off by default** (`setOtaStallTimeout(0)`): the library never aborts/reboots a running `/update` on its own anymore. Recovery on a genuinely broken upload only when explicitly enabled (`setOtaStallTimeout(ms>0)`, recommended ≥ 20000).
-  - **Diagnostics:** `/update` logs progress every 64 KB (when debug is on).
-
-### 3.0.1
-- **OTA receive fix** (regression from 3.0.0): `/update` **and** espota (port 3232) work again.
-  - Service task now runs on **core 1** (away from WiFi/lwIP/AsyncTCP on core 0) — removes the contention that stalled OTA reception.
-  - During an OTA the service task fully backs off (no scan/reconnect/LED/reset button) so AsyncTCP/flash aren't disturbed; only a **genuine** stall triggers self-healing.
-  - Watchdog is fed during the (blocking) espota transfer via `onProgress`.
-  - Stall-timeout default **8 s → 20 s** (no longer aborts the legitimate deinit/erase phase).
-
-### 3.0.0
-- **FreeRTOS service task** (`wfwm_svc`, on by default): housekeeping runs in its own task; public `loop()` becomes a no-op (backward compatible). Use `setServiceTask(false)` for the previous behavior.
-- **Task watchdog** (on by default, watches only the service task) + reset-reason log at boot; consumer API `enableWatchdog()`, `watchdogAdd/Feed/RemoveCurrentTask()`.
-- **OTA self-healing:** aborted uploads are detected via a stall timeout → abort + reboot. `setOtaStallTimeout(ms)`.
-- **`/reset`:** new **"Restart ESP"** button (reboot without data loss).
-- **Fix:** checkboxes/radios now sit to the **left** of the text (CSS).
-- MAJOR bump: `loop()` becomes optional; the default-on background task + panic watchdog change runtime behavior noticeably (source-compatible).
-
-### 2.2.0
-- `setOnUpdateStart()` — pre-flash callback (stop peripherals before OTA).
-
-### 2.1.0
-- Optional WiFi status LED (WS2812) via `enableStatusLed()`.
+| Version | Date | Description |
+|---------|------|-------------|
+| **3.0.2** | 2026-09-21 | OTA reception further hardened: no more device reboot on an ArduinoOTA error (espota previously could reboot during the handshake → "No response"); `ArduinoOTA.handle()` polled every **10 ms**.<br>**OTA self-healing off by default** (`setOtaStallTimeout(0)`): a running `/update` is **never** aborted on its own; recovery only when enabled (`setOtaStallTimeout(ms>0)`, recommended ≥ 20000).<br>`/update` progress diagnostics (every 64 KB) when debug is on. |
+| **3.0.1** | 2026-09-21 | OTA receive fix (regression from 3.0.0): service task runs on **core 1** (away from WiFi/lwIP/AsyncTCP on core 0); the service task fully backs off during an OTA (no scan/reconnect/LED/reset button); watchdog fed during espota via `onProgress`; stall-timeout default **8 s → 20 s**. |
+| **3.0.0** | 2026-09-17 | **FreeRTOS service task** (`wfwm_svc`, on by default; public `loop()` becomes a no-op, `setServiceTask(false)` for the old behavior); **task watchdog** (on by default) + reset-reason log at boot; OTA self-healing via stall timeout (`setOtaStallTimeout`); "Restart ESP" button on `/reset`; fix: checkboxes/radios to the left of the text. **MAJOR** (runtime behavior changes, source-compatible). |
+| **2.2.0** | 2026-09-15 | `setOnUpdateStart()` — pre-flash callback to stop peripherals before an OTA. |
+| **2.1.0** | 2026-09-03 | Optional WiFi status LED (WS2812) via `enableStatusLed()`. |
 
 ## 📄 License
 
