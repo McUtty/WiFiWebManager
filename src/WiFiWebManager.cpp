@@ -54,8 +54,9 @@ void WiFiWebManager::begin() {
     ArduinoOTA.onStart([this]() { otaInProgress = true; otaLastChunkMs = millis(); if (onUpdateStart) onUpdateStart(); });
     ArduinoOTA.onProgress([this](unsigned int, unsigned int) { otaLastChunkMs = millis(); watchdogFeedCurrentTask(); });
     ArduinoOTA.onEnd([this]() { otaInProgress = false; });
-    ArduinoOTA.onError([this](ota_error_t) { otaInProgress = false; ESP.restart(); });
+    ArduinoOTA.onError([this](ota_error_t e) { otaInProgress = false; if (debugMode) Serial.printf("ArduinoOTA-Fehler: %d\n", (int)e); });
     ArduinoOTA.begin();
+    debugPrintf("ArduinoOTA bereit (Port 3232), Host: %s\n", getHostname().c_str());
 
     ledStarted = true;
     statusLedBegin();   // no-op, solange die LED nicht aktiviert wurde
@@ -99,7 +100,9 @@ void WiFiWebManager::serviceIteration() {
     // Stillstand (abgerissener Upload) löst die Selbstheilung aus.
     if (otaInProgress) {
         watchdogFeedCurrentTask();
-        if (millis() - otaLastChunkMs > otaStallTimeoutMs) {
+        // Selbstheilung nur wenn ausdrücklich aktiviert (otaStallTimeoutMs > 0).
+        // Default AUS -> ein laufender OTA wird NIE von der Lib abgebrochen.
+        if (otaStallTimeoutMs > 0 && millis() - otaLastChunkMs > otaStallTimeoutMs) {
             debugPrintln("OTA gestallt (kein Fortschritt) - Update.abort() + Neustart.");
             otaInProgress = false;
             Update.abort();
@@ -161,7 +164,9 @@ void WiFiWebManager::serviceTaskLoop() {
     for (;;) {
         serviceIteration();
         watchdogFeedCurrentTask();
-        vTaskDelay(pdMS_TO_TICKS(50));
+        // Kurzer Takt: ArduinoOTA.handle() muss die espota-Invitation zeitnah
+        // beantworten (Port 3232). 10 ms sind billig und deutlich reaktiver.
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
@@ -1187,6 +1192,10 @@ void WiFiWebManager::setupWebServer() {
                 }
             }
             otaLastChunkMs = millis();   // jeder Chunk hält den Stall-Timer frisch
+            // Diagnose: alle 64 KB einen Fortschritt loggen (zeigt, ob nach dem
+            // ersten Chunk weitere ankommen).
+            if (debugMode && ((index + len) >> 16) != (index >> 16))
+                Serial.printf("OTA empfangen: %u Bytes\n", (unsigned)(index + len));
             if (!Update.hasError()) {
                 if (Update.write(data, len) != len) {
                     if (debugMode) Update.printError(Serial);

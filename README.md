@@ -317,6 +317,12 @@ Siehe `/examples` Ordner für vollständige Beispiele:
 
 ## 📝 Changelog
 
+### 3.0.2
+- **OTA-Empfang weiter gehärtet** (Fortsetzung von 3.0.1):
+  - **espota (3232):** kein Geräte-Reboot mehr bei ArduinoOTA-Fehler (rebootete zuvor u. U. schon im Handshake → „No response"). Service-Loop pollt `ArduinoOTA.handle()` jetzt alle **10 ms** (statt 50 ms). Bereitschaft wird beim Boot geloggt.
+  - **OTA-Selbstheilung standardmäßig AUS** (`setOtaStallTimeout(0)` als Default): die Lib bricht einen laufenden `/update` **nie mehr** selbst ab/rebootet. Recovery bei echtem Abriss nur noch auf ausdrücklichen Wunsch (`setOtaStallTimeout(ms>0)`, empfohlen ≥ 20000).
+  - **Diagnose:** `/update` loggt bei aktivem Debug den Fortschritt (alle 64 KB).
+
 ### 3.0.1
 - **Fix OTA-Empfang** (Regression aus 3.0.0): `/update` **und** espota (Port 3232) funktionieren wieder.
   - Service-Task läuft jetzt auf **Core 1** (weg von WiFi/lwIP/AsyncTCP auf Core 0) — beseitigt die Kontention, die den OTA-Empfang abwürgte.
